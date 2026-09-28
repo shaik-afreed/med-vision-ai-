@@ -29,6 +29,16 @@ train_dataset = tf.keras.utils.image_dataset_from_directory(
     color_mode="rgb"
 )
 
+# NOTE: shuffle must NOT be False here. image_dataset_from_directory only
+# pre-shuffles the file list (seeded) before slicing off validation_split
+# when shuffle=True (the default). With shuffle=False it instead takes a
+# contiguous tail slice of the class-sorted file list, which - because
+# PNEUMONIA has ~3x more images than NORMAL in this dataset - produced a
+# validation set that was 100% PNEUMONIA in a previous run of this script.
+# That made val_auc-based checkpointing/early-stopping meaningless (AUC is
+# undefined with only one class present). shuffle=False only affects
+# per-epoch batch order during training, not evaluation correctness, so
+# there is no downside to leaving it at the default here.
 validation_dataset = tf.keras.utils.image_dataset_from_directory(
     DATASET_PATH,
     validation_split=0.20,
@@ -36,8 +46,7 @@ validation_dataset = tf.keras.utils.image_dataset_from_directory(
     seed=SEED,
     image_size=IMAGE_SIZE,
     batch_size=BATCH_SIZE,
-    color_mode="rgb",
-    shuffle=False
+    color_mode="rgb"
 )
 
 print()

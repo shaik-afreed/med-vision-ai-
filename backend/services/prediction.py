@@ -26,8 +26,12 @@ MODEL_PATH = os.path.abspath(
 
 IMAGE_SIZE = (224, 224)
 
-# Final validated operating threshold
-THRESHOLD = 0.66
+# Operating threshold selected by ai_model/evaluate_model.py via Youden's J
+# on a calibration subset of the test set, disjoint from the holdout subset
+# metrics are reported on. See ai_model/evaluation_report.json for the full
+# methodology and numbers, and ai_model/archive/README.md for why the
+# previous 0.66 value (from a test-set-leaked analysis) was replaced.
+THRESHOLD = 0.82
 
 
 # ============================================================

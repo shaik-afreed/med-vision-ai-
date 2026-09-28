@@ -12,8 +12,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "saved_models", "fine_tuned_model.h5")
 IMAGE_SIZE = (224, 224)
 
-# Current operating threshold
-THRESHOLD = 0.66
+# Operating threshold selected by evaluate_model.py; keep in sync with
+# backend/services/prediction.py. See evaluation_report.json for details.
+THRESHOLD = 0.82
 
 
 # ==============================

@@ -1,0 +1,113 @@
+{
+  "model_path": "ai_model/saved_models/fine_tuned_model.h5",
+  "input_size": [
+    224,
+    224
+  ],
+  "classes": [
+    "NORMAL",
+    "PNEUMONIA"
+  ],
+  "preprocessing": "mobilenet_v2.preprocess_input is embedded in the model graph; inputs are raw 0-255 RGB float32 pixel arrays with no external normalization, resized to 224x224 via PIL (matches production).",
+  "methodology_note": "The training-directory validation split could not be used for threshold calibration: fine_tune.py (Phase 2, which produced the deployed model) used shuffle=False, causing its 'validation' set to be a contiguous, single-class (100% PNEUMONIA) slice rather than a random stratified sample, and Phase 1 had already trained on nearly all of the train directory. The TEST directory is the only data neither phase touched, so it was split once (stratified, seed=42) into a calibration subset (threshold selection only) and a disjoint holdout subset (final metrics only).",
+  "full_test_set": {
+    "total_images": 624,
+    "normal_images": 234,
+    "pneumonia_images": 390,
+    "auc": 0.9673898750821828
+  },
+  "calibration_subset": {
+    "total_images": 249,
+    "normal_images": 93,
+    "pneumonia_images": 156,
+    "purpose": "threshold selection only",
+    "selected_threshold": 0.82,
+    "metrics_at_selected_threshold": {
+      "threshold": 0.8200000000000002,
+      "accuracy": 0.9076305220883534,
+      "precision": 0.9463087248322147,
+      "recall": 0.9038461538461539,
+      "specificity": 0.9139784946236559,
+      "f1": 0.9245901639344263,
+      "auc": 0.9629170113041081,
+      "youden_j": 0.8178246484698097,
+      "confusion_matrix": {
+        "tn": 85,
+        "fp": 8,
+        "fn": 15,
+        "tp": 141
+      }
+    }
+  },
+  "holdout_subset": {
+    "total_images": 375,
+    "normal_images": 141,
+    "pneumonia_images": 234,
+    "purpose": "final reported metrics, never used for threshold selection",
+    "result": {
+      "threshold": 0.82,
+      "accuracy": 0.9066666666666666,
+      "precision": 0.9502262443438914,
+      "recall": 0.8974358974358975,
+      "specificity": 0.9219858156028369,
+      "f1": 0.9230769230769229,
+      "auc": 0.9718736740013336,
+      "youden_j": 0.8194217130387345,
+      "confusion_matrix": {
+        "tn": 130,
+        "fp": 11,
+        "fn": 24,
+        "tp": 210
+      }
+    },
+    "classification_report": "              precision    recall  f1-score   support\n\n      NORMAL     0.8442    0.9220    0.8814       141\n   PNEUMONIA     0.9502    0.8974    0.9231       234\n\n    accuracy                         0.9067       375\n   macro avg     0.8972    0.9097    0.9022       375\nweighted avg     0.9103    0.9067    0.9074       375\n"
+  },
+  "full_test_set_informational_only": {
+    "note": "Includes the calibration images; NOT an unbiased estimate.",
+    "result": {
+      "threshold": 0.82,
+      "accuracy": 0.907051282051282,
+      "precision": 0.9486486486486486,
+      "recall": 0.9,
+      "specificity": 0.9188034188034188,
+      "f1": 0.9236842105263158,
+      "auc": 0.9673898750821828,
+      "youden_j": 0.8188034188034188,
+      "confusion_matrix": {
+        "tn": 215,
+        "fp": 19,
+        "fn": 39,
+        "tp": 351
+      }
+    }
+  },
+  "external_generalization": {
+    "note": "These images are not part of the Kermany/Guangzhou pediatric chest X-ray distribution the model was trained on. This is a small, informal generalization check, not a validated benchmark.",
+    "predictions": [
+      {
+        "file": "external_normal_02.jpg.jpg",
+        "prediction": "NORMAL",
+        "pneumonia_probability": 0.7602,
+        "model_confidence": 0.2398
+      },
+      {
+        "file": "new_xray_01.jpg.jpeg",
+        "prediction": "PNEUMONIA",
+        "pneumonia_probability": 0.9298,
+        "model_confidence": 0.9298
+      },
+      {
+        "file": "normal_external_01.png.jpeg",
+        "prediction": "PNEUMONIA",
+        "pneumonia_probability": 0.9645,
+        "model_confidence": 0.9645
+      }
+    ]
+  },
+  "known_limitations": [
+    "Threshold calibration and final metrics both come from the TEST directory (split into disjoint subsets), because the training pipeline's own validation split was compromised - see methodology_note. A fully independent pipeline would require retraining with three disjoint splits from the start.",
+    "The calibration/holdout split of only 624 test images (250 calibration, 374 holdout) is small; reported precision/specificity/F1 at the selected threshold have real sampling uncertainty. AUC (computed on the full test set, threshold-independent) is the more stable summary statistic.",
+    "The model is trained on a single-source pediatric dataset (Kermany/Guangzhou). External test images in this evaluation were misclassified, indicating the model does not reliably generalize outside that dataset's imaging conditions.",
+    "This is a screening-support research tool, not a diagnostic device, and has not been validated for clinical use."
+  ]
+}
