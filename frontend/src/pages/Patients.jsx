@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import api from "../api/api";
+import {
+  getPatients,
+  createPatient,
+  updatePatient,
+  deletePatient as deletePatientRequest,
+} from "../api/api";
 function Patients() {
 
   const [patients, setPatients] = useState([]);
@@ -33,10 +38,10 @@ function Patients() {
       setLoading(true);
       setError("");
 
-     const response = await api.get("/patients/");
+     const response = await getPatients();
 
       setPatients(
-        response.data.patients || []
+        response.patients || []
       );
 
     } catch (error) {
@@ -139,9 +144,6 @@ function Patients() {
 
     try {
 
-      const token =
-        localStorage.getItem("access_token");
-
       const data = {
         full_name: form.full_name,
         age: Number(form.age),
@@ -154,17 +156,11 @@ function Patients() {
 
       if (editingPatient) {
 
-       await api.put(
-  `/patients/${editingPatient.id}`,
-  data
-);
+       await updatePatient(editingPatient.id, data);
 
       } else {
 
-      await api.post(
-  "/patients/",
-  data
-);
+      await createPatient(data);
       }
 
 
@@ -209,10 +205,8 @@ function Patients() {
 
     try {
 
-      await api.delete(
-  `/patients/${patientId}`
-);
-      
+      await deletePatientRequest(patientId);
+
 
       await loadPatients();
 

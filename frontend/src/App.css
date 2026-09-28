@@ -86,6 +86,9 @@ button {
   gap: 12px;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
+  width: 100%;
+  font-size: 14px;
 }
 
 .nav-item span {
@@ -658,6 +661,27 @@ button {
   font-size: 10px;
 }
 
+.login-switch {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: #7b8497;
+}
+
+.login-switch button {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+}
+
+.login-switch button:hover {
+  text-decoration: underline;
+}
+
 /* ==============================
    X-RAY UPLOAD
 ============================== */
@@ -788,6 +812,111 @@ button {
   font-size: 13px;
 }
 
+/* ================= AI RESULT PANEL ================= */
+
+.ai-result-panel {
+  width: 100%;
+  max-width: 460px;
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.ai-result-panel.pneumonia-result {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
+}
+
+.ai-result-panel.normal-result {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #14532d;
+}
+
+.ai-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ai-result-header strong {
+  font-size: 14px;
+}
+
+.ai-result-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.ai-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ai-result-grid > div {
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.ai-result-grid span {
+  display: block;
+  font-size: 10px;
+  opacity: 0.8;
+  margin-bottom: 3px;
+}
+
+.ai-result-grid strong {
+  display: block;
+  font-size: 12px;
+}
+
+.ai-result-disclaimer {
+  font-size: 11px;
+  line-height: 1.6;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  opacity: 0.9;
+}
+
+.report-notes {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e8ebf0;
+}
+
+.report-notes label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #435066;
+}
+
+.report-notes textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dfe4ec;
+  border-radius: 9px;
+  outline: none;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.report-notes textarea:focus {
+  border-color: #2563eb;
+}
+
 /* ================= REPORT IMAGE ================= */
 
 .report-image-section {
@@ -811,4 +940,192 @@ button {
   border-radius: 10px;
   border: 1px solid #e8ebf0;
   background: #111827;
+}
+
+/* ================= PATIENTS PAGE ================= */
+/* These classes were referenced in Patients.jsx from the start but never
+   defined anywhere, so the page rendered unstyled. */
+
+.patients-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.patients-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.patients-header h2 {
+  margin: 0 0 5px;
+  font-size: 26px;
+}
+
+.patients-header p {
+  margin: 0;
+  color: #7b8497;
+  font-size: 13px;
+}
+
+.api-error {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+  font-size: 13px;
+}
+
+.patient-form-panel,
+.patients-panel {
+  background: white;
+  border: 1px solid #e8ebf0;
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.form-group.form-full {
+  grid-column: 1 / -1;
+}
+
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid #dfe4ec;
+  border-radius: 9px;
+  outline: none;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #2563eb;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.secondary-button {
+  border: 1px solid #dfe4ec;
+  background: white;
+  color: #536078;
+  padding: 11px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.secondary-button:hover {
+  background: #f5f7fb;
+}
+
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: #8992a4;
+}
+
+.empty-state h3 {
+  margin: 0 0 6px;
+  color: #435066;
+}
+
+.patients-table-wrapper {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.patients-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.patients-table th {
+  text-align: left;
+  padding: 10px 12px;
+  color: #8992a4;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #e8ebf0;
+}
+
+.patients-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f2f6;
+  vertical-align: middle;
+}
+
+.table-edit-button,
+.table-delete-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.table-edit-button {
+  color: #2563eb;
+}
+
+.table-edit-button:hover {
+  background: #eaf1ff;
+}
+
+.table-delete-button {
+  color: #dc2626;
+}
+
+.table-delete-button:hover {
+  background: #fff1f2;
+}
+
+/* ================= REPORTS PAGE HEADER ================= */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0 0 5px;
+  font-size: 26px;
+}
+
+.page-header p {
+  margin: 0;
+  color: #7b8497;
+  font-size: 13px;
+}
+
+@media (max-width: 750px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-result-grid {
+    grid-template-columns: 1fr;
+  }
 }
