@@ -11,11 +11,4 @@ def hash_password(password: str):
 
 
 def verify_password(plain_password: str, hashed_password: str):
-    print("Entered Password :", plain_password)
-    print("Stored Hash      :", hashed_password)
-
-    result = pwd_context.verify(plain_password, hashed_password)
-
-    print("Password Match   :", result)
-
-    return result
+    return pwd_context.verify(plain_password, hashed_password)

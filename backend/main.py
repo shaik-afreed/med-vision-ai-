@@ -1,22 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from core.config import settings
+
 from routers.home import router as home_router
 from routers.auth import router as auth_router
 from routers.patient import router as patient_router
-
-from database.database import Base, engine
-from models.user import User
-from models.patient import Patient
-from models.report import Report
 from routers.report import router as report_router
-from routers.predict import router as predict_router
+
+from database.database import engine
+
+# Schema is managed by Alembic migrations (see alembic/), not
+# Base.metadata.create_all(). Run `alembic upgrade head` before starting
+# the server, including on a fresh clone.
 
 
-Base.metadata.create_all(bind=engine)
-
-
-app = FastAPI()
+app = FastAPI(
+    title=settings.APP_NAME,
+    description=(
+        "AI-assisted chest X-ray screening platform. "
+        "AI predictions are a research-support screening aid, not a "
+        "clinical diagnosis."
+    ),
+)
 
 
 # ==============================
@@ -25,12 +31,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174"
-    ],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,4 +46,24 @@ app.include_router(home_router)
 app.include_router(auth_router)
 app.include_router(patient_router)
 app.include_router(report_router)
-app.include_router(predict_router)
+
+
+# ==============================
+# HEALTH
+# ==============================
+
+@app.get("/health", tags=["System"])
+def health():
+    db_status = "ok"
+
+    try:
+        with engine.connect() as connection:
+            connection.exec_driver_sql("SELECT 1")
+    except Exception as exc:
+        db_status = f"error: {exc}"
+
+    return {
+        "status": "ok" if db_status == "ok" else "degraded",
+        "database": db_status,
+        "model_version": settings.MODEL_VERSION,
+    }

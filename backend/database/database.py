@@ -1,13 +1,19 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# SQLite database file
-DATABASE_URL = "sqlite:///./medivision.db"
+from core.config import settings
 
-# Create database engine
+# SQLite needs check_same_thread=False for use across FastAPI's threadpool;
+# other database backends don't accept that argument.
+connect_args = (
+    {"check_same_thread": False}
+    if settings.DATABASE_URL.startswith("sqlite")
+    else {}
+)
+
 engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    settings.DATABASE_URL,
+    connect_args=connect_args
 )
 
 # Create database session

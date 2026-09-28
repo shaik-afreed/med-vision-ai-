@@ -1,8 +1,9 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 
 # ==========================
-# Create Patient Schema
+# Create / Update Patient Schema
 # ==========================
 class PatientCreate(BaseModel):
     full_name: str
@@ -10,19 +11,16 @@ class PatientCreate(BaseModel):
     gender: str
     phone: str
     address: str
-    disease: str  | None = None
+    disease: str | None = None
 
 
-# ==========================
-# Update Patient Schema
-# ==========================
 class PatientUpdate(BaseModel):
     full_name: str
     age: int
     gender: str
     phone: str
     address: str
-    disease: str   | None = None
+    disease: str | None = None
 
 
 # ==========================
@@ -35,7 +33,19 @@ class PatientResponse(BaseModel):
     gender: str
     phone: str
     address: str
-    disease: str  | None = None
+    disease: str | None = None
+    created_at: datetime | None = None
+    owner_id: int
 
     class Config:
         from_attributes = True
+
+
+class PatientListResponse(BaseModel):
+    total: int
+    patients: list[PatientResponse]
+
+
+class PatientMutationResponse(BaseModel):
+    message: str
+    patient: PatientResponse
