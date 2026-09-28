@@ -1,0 +1,16 @@
+{
+  "name": "medivision-ai-e2e",
+  "version": "1.0.0",
+  "description": "Playwright end-to-end tests for MediVision AI",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

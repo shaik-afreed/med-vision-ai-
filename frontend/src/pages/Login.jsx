@@ -74,20 +74,22 @@ function Login() {
         <form onSubmit={handleSubmit}>
           {mode === "register" && (
             <div className="form-group">
-              <label>Full Name</label>
+              <label htmlFor="login-name">Full Name</label>
               <input
                 type="text"
                 placeholder="Dr. Jane Smith"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 required
+                id="login-name"
               />
             </div>
           )}
 
           <div className="form-group">
-            <label>Email</label>
+            <label htmlFor="login-email">Email</label>
             <input
+              id="login-email"
               type="email"
               placeholder="Enter your email"
               value={email}
@@ -97,8 +99,9 @@ function Login() {
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="login-password">Password</label>
             <input
+              id="login-password"
               type="password"
               placeholder="Enter your password"
               value={password}

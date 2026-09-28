@@ -306,11 +306,12 @@ function Patients() {
 
               <div className="form-group">
 
-                <label>
+                <label htmlFor="patient-full-name">
                   Full Name
                 </label>
 
                 <input
+                  id="patient-full-name"
                   name="full_name"
                   value={form.full_name}
                   onChange={handleChange}
@@ -323,11 +324,12 @@ function Patients() {
 
               <div className="form-group">
 
-                <label>
+                <label htmlFor="patient-age">
                   Age
                 </label>
 
                 <input
+                  id="patient-age"
                   type="number"
                   name="age"
                   value={form.age}
@@ -342,11 +344,12 @@ function Patients() {
 
               <div className="form-group">
 
-                <label>
+                <label htmlFor="patient-gender">
                   Gender
                 </label>
 
                 <select
+                  id="patient-gender"
                   name="gender"
                   value={form.gender}
                   onChange={handleChange}
@@ -376,11 +379,12 @@ function Patients() {
 
               <div className="form-group">
 
-                <label>
+                <label htmlFor="patient-phone">
                   Phone
                 </label>
 
                 <input
+                  id="patient-phone"
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
@@ -393,11 +397,12 @@ function Patients() {
 
               <div className="form-group">
 
-                <label>
+                <label htmlFor="patient-disease">
                   Disease
                 </label>
 
                 <input
+                  id="patient-disease"
                   name="disease"
                   value={form.disease}
                   onChange={handleChange}
@@ -409,11 +414,12 @@ function Patients() {
 
               <div className="form-group form-full">
 
-                <label>
+                <label htmlFor="patient-address">
                   Address
                 </label>
 
                 <textarea
+                  id="patient-address"
                   name="address"
                   value={form.address}
                   onChange={handleChange}
