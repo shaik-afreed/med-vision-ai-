@@ -26,6 +26,15 @@ watchfiles==1.2.0
 websockets==16.1
 
 # ==============================
+# AI inference (services/prediction.py loads the trained model directly
+# in-process; versions pinned to match ai_model/requirements.txt so
+# training/evaluation and production inference behave identically)
+# ==============================
+tensorflow==2.13.0
+numpy==1.23.5
+Pillow==11.3.0
+
+# ==============================
 # Testing
 # ==============================
 pytest==9.1.1
