@@ -132,15 +132,21 @@ def predict_disease(file_path: str):
     # RESPONSE
     # --------------------------------------------------------
 
+    # Round to 6 decimal places, not 2: rounding to 2dp here (before the
+    # value is ever returned/stored) was collapsing any probability
+    # >= 0.99995 to a misleading "100.0" before the frontend ever saw it.
+    # 6dp preserves the model's real precision (float32 has ~7 significant
+    # digits) while still trimming binary-float noise; display-level
+    # rounding belongs in the frontend, not here.
     return {
         "disease": disease,
         "confidence": round(
             confidence * 100,
-            2
+            6
         ),
         "pneumonia_probability": round(
             probability * 100,
-            2
+            6
         ),
         "threshold": THRESHOLD
     }

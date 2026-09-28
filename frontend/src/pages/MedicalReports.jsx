@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getReports, getPatients, getReportImageUrl, updateReport } from "../api/api";
 import ResultPanel from "../components/ResultPanel";
+import { formatPercent } from "../utils/format";
 
 function MedicalReports() {
   const [reports, setReports] = useState([]);
@@ -128,7 +129,7 @@ function MedicalReports() {
                 >
                   <strong>{report.prediction || "Pending"}</strong>
                   {report.confidence != null ? (
-                    <span>Confidence: {report.confidence}%</span>
+                    <span>Confidence: {formatPercent(report.confidence)}%</span>
                   ) : (
                     <span>No AI confidence</span>
                   )}

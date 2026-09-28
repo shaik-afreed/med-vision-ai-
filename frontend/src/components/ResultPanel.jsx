@@ -1,3 +1,5 @@
+import { formatPercent } from "../utils/format";
+
 function formatDate(value) {
   if (!value) return "—";
 
@@ -39,14 +41,16 @@ export default function ResultPanel({ report, patientName }) {
           <span>Pneumonia probability</span>
           <strong>
             {report.pneumonia_probability != null
-              ? `${report.pneumonia_probability}%`
+              ? `${formatPercent(report.pneumonia_probability)}%`
               : "—"}
           </strong>
         </div>
 
         <div>
           <span>Model confidence</span>
-          <strong>{report.confidence != null ? `${report.confidence}%` : "—"}</strong>
+          <strong>
+            {report.confidence != null ? `${formatPercent(report.confidence)}%` : "—"}
+          </strong>
         </div>
 
         <div>
