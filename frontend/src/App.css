@@ -1,0 +1,814 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+button {
+  font: inherit;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  background: #f5f7fb;
+  color: #172033;
+}
+
+
+/* ================= SIDEBAR ================= */
+
+.sidebar {
+  width: 250px;
+  min-height: 100vh;
+  background: #ffffff;
+  border-right: 1px solid #e6e9ef;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 10px 30px;
+}
+
+.brand-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #2563eb;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.brand span {
+  color: #7b8497;
+  font-size: 12px;
+}
+
+
+/* ================= NAVIGATION ================= */
+
+.navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nav-item {
+  border: none;
+  background: transparent;
+  color: #687286;
+  padding: 13px 14px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-item span {
+  width: 22px;
+  font-size: 17px;
+}
+
+.nav-item:hover {
+  background: #f1f5ff;
+  color: #2563eb;
+}
+
+.nav-item.active {
+  background: #eaf1ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+
+/* ================= USER ================= */
+
+.sidebar-bottom {
+  margin-top: auto;
+}
+
+.user-card,
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-card {
+  padding: 14px 8px 0;
+  border-top: 1px solid #e8ebf0;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.user-card strong,
+.profile strong {
+  display: block;
+  font-size: 13px;
+}
+
+.user-card span,
+.profile span {
+  display: block;
+  color: #8992a4;
+  font-size: 11px;
+}
+
+
+/* ================= MAIN ================= */
+
+.main-content {
+  flex: 1;
+  padding: 28px 34px;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+
+/* ================= TOPBAR ================= */
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.topbar h2 {
+  margin: 0 0 5px;
+  font-size: 28px;
+}
+
+.topbar p {
+  margin: 0;
+  color: #7b8497;
+  font-size: 14px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.notification {
+  border: 1px solid #e4e8ef;
+  background: white;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+
+/* ================= STATS ================= */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #e8ebf0;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.stat-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+
+.patients-icon {
+  background: #e9f2ff;
+  color: #2563eb;
+}
+
+.reports-icon {
+  background: #f0eaff;
+  color: #7c3aed;
+}
+
+.xray-icon {
+  background: #e8f8f2;
+  color: #059669;
+}
+
+.accuracy-icon {
+  background: #fff4df;
+  color: #d97706;
+}
+
+.stat-card span {
+  color: #7b8497;
+  font-size: 12px;
+}
+
+.stat-card h3 {
+  margin: 4px 0;
+  font-size: 25px;
+}
+
+.stat-card small {
+  color: #16a34a;
+  font-size: 11px;
+}
+
+
+/* ================= PANELS ================= */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+
+.panel {
+  background: white;
+  border: 1px solid #e8ebf0;
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.panel-header h3 {
+  margin: 0 0 5px;
+  font-size: 17px;
+}
+
+.panel-header p {
+  margin: 0;
+  color: #8992a4;
+  font-size: 12px;
+}
+
+.status-badge {
+  background: #e9f8f0;
+  color: #15803d;
+  border-radius: 20px;
+  padding: 7px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+
+/* ================= UPLOAD ================= */
+
+.upload-area {
+  margin-top: 24px;
+  min-height: 280px;
+  border: 2px dashed #d8dee9;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+}
+
+.upload-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #edf4ff;
+  display: grid;
+  place-items: center;
+  font-size: 25px;
+  margin-bottom: 14px;
+}
+
+.upload-area h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.upload-area p {
+  max-width: 350px;
+  margin: 0 0 18px;
+  color: #8992a4;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.primary-button {
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 11px 22px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primary-button:hover {
+  background: #1d4ed8;
+}
+
+.upload-area small {
+  margin-top: 12px;
+  color: #9aa2b1;
+  font-size: 10px;
+}
+
+
+/* ================= REPORTS ================= */
+
+.text-button {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.reports-list {
+  margin-top: 18px;
+}
+
+.report-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.report-item:last-child {
+  border-bottom: none;
+}
+
+.report-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0f3f8;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #536078;
+}
+
+.report-info {
+  flex: 1;
+}
+
+.report-info strong {
+  display: block;
+  font-size: 12px;
+}
+
+.report-info span {
+  display: block;
+  color: #929aaa;
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.report-result {
+  min-width: 150px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.report-result strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.report-result span {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.report-result.pneumonia {
+  background: #fff0f0;
+  color: #dc2626;
+}
+
+.report-result.normal {
+  background: #ecfdf3;
+  color: #16a34a;
+}
+
+.report-result.pending {
+  background: #ecfdf3;
+  color: #15803d;
+}
+/* ================= DISCLAIMER ================= */
+
+.medical-disclaimer {
+  margin-top: 20px;
+  padding: 14px 18px;
+  background: #fffaf0;
+  border: 1px solid #f2dfb0;
+  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: #765b1e;
+}
+
+.medical-disclaimer strong {
+  white-space: nowrap;
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1100px) {
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 750px) {
+
+  .sidebar {
+    display: none;
+  }
+
+  .main-content {
+    padding: 20px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .profile {
+    display: none;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .medical-disclaimer {
+    flex-direction: column;
+  }
+}
+
+/* ==============================
+   LOGIN PAGE
+============================== */
+
+.login-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 430px;
+  background: #ffffff;
+  border: 1px solid #e5e9f0;
+  border-radius: 18px;
+  padding: 36px;
+  box-shadow: 0 18px 45px rgba(23, 32, 51, 0.08);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 34px;
+}
+
+.login-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  background: #2563eb;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.login-brand h1 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.login-brand p {
+  margin: 3px 0 0;
+  color: #8992a4;
+  font-size: 12px;
+}
+
+.login-heading {
+  margin-bottom: 24px;
+}
+
+.login-heading h2 {
+  margin: 0 0 7px;
+  font-size: 24px;
+}
+
+.login-heading p {
+  margin: 0;
+  color: #7b8497;
+  font-size: 13px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid #dfe4ec;
+  border-radius: 9px;
+  outline: none;
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  border-color: #2563eb;
+}
+
+.login-button {
+  width: 100%;
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 13px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.login-button:hover {
+  background: #1d4ed8;
+}
+
+.login-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.login-error {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.login-notice {
+  margin-top: 22px;
+  padding: 12px;
+  background: #f5f8ff;
+  border-radius: 9px;
+  text-align: center;
+}
+
+.login-notice strong {
+  display: block;
+  font-size: 11px;
+  color: #2563eb;
+  margin-bottom: 3px;
+}
+
+.login-notice span {
+  color: #8992a4;
+  font-size: 10px;
+}
+
+/* ==============================
+   X-RAY UPLOAD
+============================== */
+
+.patient-select {
+  width: 80%;
+  max-width: 400px;
+  padding: 11px 13px;
+  margin: 10px 0;
+  border: 1px solid #dce3ef;
+  border-radius: 9px;
+  background: white;
+  font-size: 13px;
+  outline: none;
+}
+
+.patient-select:focus {
+  border-color: #2563eb;
+}
+
+.file-select-button {
+  display: inline-block;
+  margin: 8px 0;
+  padding: 11px 20px;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  color: #2563eb;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.file-select-button:hover {
+  background: #f3f7ff;
+}
+
+.selected-file {
+  margin: 5px 0 10px;
+  color: #526078;
+  font-size: 12px;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-error {
+  width: 80%;
+  max-width: 400px;
+  margin: 8px auto;
+  padding: 9px;
+  border-radius: 8px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+  font-size: 12px;
+}
+
+.prediction-result {
+  width: 80%;
+  max-width: 400px;
+  margin-top: 15px;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.prediction-result strong {
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+
+.pneumonia-result {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+}
+
+.normal-result {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ================= REPORT DETAILS ================= */
+
+.report-details {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e8ebf0;
+  border-radius: 12px;
+}
+
+.report-details-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.report-details-grid > div {
+  padding: 12px;
+  background: white;
+  border: 1px solid #e8ebf0;
+  border-radius: 8px;
+}
+
+.report-details-grid span {
+  display: block;
+  color: #8992a4;
+  font-size: 10px;
+  margin-bottom: 5px;
+}
+
+.report-details-grid strong {
+  display: block;
+  color: #273142;
+  font-size: 13px;
+}
+
+/* ================= REPORT IMAGE ================= */
+
+.report-image-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e8ebf0;
+}
+
+.report-image-section h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+}
+
+.report-xray-image {
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  max-height: 500px;
+  object-fit: contain;
+  margin: 0 auto;
+  border-radius: 10px;
+  border: 1px solid #e8ebf0;
+  background: #111827;
+}

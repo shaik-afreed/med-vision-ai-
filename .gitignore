@@ -1,0 +1,41 @@
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# ==============================
+# Backend runtime data
+# ==============================
+backend/medivision.db
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ==============================
+# AI dataset (large, not committed — see ai_model/README.md for source)
+# ==============================
+ai_model/dataset/
+
+# ==============================
+# Node / frontend
+# ==============================
+node_modules/
+frontend/dist/
+
+# ==============================
+# Env / secrets
+# ==============================
+.env
+.env.local
+*.env
+
+# ==============================
+# Editor / OS
+# ==============================
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
