@@ -1,11 +1,14 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserRegister(BaseModel):
     name: str
     email: EmailStr
-    password: str
+    # Matches the frontend's register-mode minLength (Login.jsx); enforced
+    # here too since the frontend constraint is trivially bypassable via
+    # direct API calls.
+    password: str = Field(min_length=8)
 
 
 class UserLogin(BaseModel):

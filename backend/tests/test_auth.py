@@ -1,7 +1,7 @@
 def test_register_creates_user(client):
     response = client.post(
         "/auth/register",
-        json={"name": "Alice", "email": "alice@example.com", "password": "pw12345"},
+        json={"name": "Alice", "email": "alice@example.com", "password": "pw123456"},
     )
     assert response.status_code == 201
     body = response.json()
@@ -10,7 +10,7 @@ def test_register_creates_user(client):
 
 
 def test_register_duplicate_email_rejected(client):
-    payload = {"name": "Bob", "email": "bob@example.com", "password": "pw12345"}
+    payload = {"name": "Bob", "email": "bob@example.com", "password": "pw123456"}
     first = client.post("/auth/register", json=payload)
     assert first.status_code == 201
 
@@ -18,15 +18,23 @@ def test_register_duplicate_email_rejected(client):
     assert second.status_code == 400
 
 
+def test_register_short_password_rejected(client):
+    response = client.post(
+        "/auth/register",
+        json={"name": "Shorty", "email": "shorty@example.com", "password": "1234567"},
+    )
+    assert response.status_code == 422
+
+
 def test_login_success_returns_token(client):
     client.post(
         "/auth/register",
-        json={"name": "Carl", "email": "carl@example.com", "password": "pw12345"},
+        json={"name": "Carl", "email": "carl@example.com", "password": "pw123456"},
     )
 
     response = client.post(
         "/auth/login",
-        data={"username": "carl@example.com", "password": "pw12345"},
+        data={"username": "carl@example.com", "password": "pw123456"},
     )
     assert response.status_code == 200
     body = response.json()
