@@ -228,6 +228,8 @@ Key routes:
 
 ## Testing
 
+### Backend (pytest)
+
 ```bash
 cd backend
 pytest
@@ -246,9 +248,25 @@ AI model evaluation (`ai_model/evaluate_model.py`) is intentionally kept
 separate from application tests - it validates model quality, not API
 behavior. See [AI model](#ai-model) above.
 
-There is no browser-based end-to-end suite (Cypress/Playwright) yet. If you
-add one, the flow to cover is: register -> login -> create patient ->
-upload X-ray -> verify the AI result panel -> view it in Medical Reports.
+### End-to-end (Playwright)
+
+```bash
+cd e2e
+npm install
+npx playwright install chromium   # first time only
+npm test
+```
+
+`playwright.config.js` starts both the backend and the frontend dev server
+itself, so this doesn't require either to already be running.
+`tests/golden-path.spec.js` drives a real browser through: register ->
+dashboard (with the live AUC card) -> create a patient -> upload a real
+chest X-ray -> wait for the actual model's prediction to render in the AI
+result panel -> confirm the same report appears in Medical Reports with
+its image and result -> sign out -> confirm protected routes redirect to
+`/login`. Plus: unauthenticated visitors get redirected, and a wrong
+password surfaces an error instead of failing silently. Nothing is mocked
+- this exercises the real model on every run.
 
 ## Project structure
 
@@ -274,6 +292,10 @@ ai_model/
   evaluate_model.py         # the one authoritative evaluation pipeline
   evaluation_report.json    # its output - read by backend's /model/info
   archive/                  # superseded evaluation scripts, kept for reference
+
+e2e/
+  playwright.config.js      # boots backend + frontend, then runs tests
+  tests/golden-path.spec.js
 ```
 
 ## Limitations & medical disclaimer
