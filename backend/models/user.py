@@ -15,3 +15,4 @@ class User(Base):
 
     patients = relationship("Patient", back_populates="owner")
     reports = relationship("Report", back_populates="owner")
+    documents = relationship("MedicalDocument", back_populates="owner")

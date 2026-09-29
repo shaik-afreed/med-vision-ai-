@@ -32,6 +32,15 @@ class Report(Base):
     threshold_used = Column(Float, nullable=True)
     model_version = Column(String, nullable=True)
 
+    # Grad-CAM heatmap image path (server-side only, never returned to the
+    # client directly - served via GET /reports/{id}/gradcam instead, same
+    # pattern as file_path/GET /reports/{id}/image) and the plain-language,
+    # rule-based explanation generated alongside it. Both are nullable:
+    # heatmap generation is a best-effort explainability feature and must
+    # never block saving the underlying prediction if it fails.
+    gradcam_path = Column(String, nullable=True)
+    ai_explanation = Column(String, nullable=True)
+
     # ==============================
     # WORKFLOW
     # ==============================
@@ -43,3 +52,7 @@ class Report(Base):
 
     patient = relationship("Patient", back_populates="reports")
     owner = relationship("User", back_populates="reports")
+
+    @property
+    def has_gradcam(self) -> bool:
+        return bool(self.gradcam_path)

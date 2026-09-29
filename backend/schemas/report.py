@@ -15,6 +15,8 @@ class ReportResponse(BaseModel):
     pneumonia_probability: float | None = None
     threshold_used: float | None = None
     model_version: str | None = None
+    has_gradcam: bool = False
+    ai_explanation: str | None = None
 
     status: str
     notes: str | None = None

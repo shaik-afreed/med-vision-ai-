@@ -50,10 +50,21 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 10
     ALLOWED_IMAGE_TYPES: list[str] = ["image/jpeg", "image/jpg", "image/png"]
 
+    DOCUMENT_UPLOAD_DIR: str = "uploads/documents"
+    ALLOWED_DOCUMENT_TYPES: list[str] = ["application/pdf", "text/plain"]
+
     # ==============================
     # AI MODEL
     # ==============================
     MODEL_VERSION: str = "mobilenetv2-finetuned-v1"
+
+    # ==============================
+    # CHATBOT (local open-source LLM via Ollama - no external API, no key)
+    # ==============================
+    # Declared here so they can be overridden from .env (extra="ignore"
+    # drops any .env variable that isn't declared as a field).
+    LOCAL_LLM_URL: str = "http://127.0.0.1:11434"
+    LOCAL_LLM_MODEL: str = "qwen2.5:7b"
 
 
 @lru_cache

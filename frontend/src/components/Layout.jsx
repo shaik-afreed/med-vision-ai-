@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: "⌂", end: true },
   { to: "/patients", label: "Patients", icon: "♙" },
   { to: "/xray", label: "X-Ray Analysis", icon: "▣" },
+  { to: "/documents", label: "Report Analysis", icon: "📄" },
   { to: "/reports", label: "Medical Reports", icon: "▤" },
 ];
 
@@ -60,7 +61,9 @@ export default function Layout() {
     <div className="app">
       <Sidebar />
       <main className="main-content">
-        <Outlet />
+        <div className="main-inner">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

@@ -49,6 +49,23 @@ def create_test_schema():
 def isolated_upload_dir(tmp_path, monkeypatch):
     """Every test writes uploads to its own throwaway temp directory."""
     monkeypatch.setattr(settings, "UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setattr(settings, "DOCUMENT_UPLOAD_DIR", str(tmp_path / "documents"))
+
+
+@pytest.fixture(autouse=True)
+def local_llm_offline(monkeypatch):
+    """Tests never depend on (or talk to) a real local Ollama server;
+    chatbot tests that need the LLM path install a stub explicitly."""
+    from services import chatbot
+
+    def offline(*_args, **_kwargs):
+        raise chatbot.LocalLLMUnavailable("disabled in tests")
+
+    monkeypatch.setattr(chatbot, "_llm_down_until", 0.0)
+    monkeypatch.setattr(chatbot, "_call_local_llm", offline)
+    monkeypatch.setattr(
+        chatbot, "local_llm_status", lambda: {"running": False, "model_ready": False}
+    )
 
 
 @pytest.fixture
@@ -103,3 +120,17 @@ def make_test_image_bytes(fmt="JPEG", size=(224, 224)):
     Image.new("RGB", size, color=(120, 120, 120)).save(buffer, format=fmt)
     buffer.seek(0)
     return buffer
+
+
+def make_test_lab_report_text():
+    """A small, realistic-shaped lab report for document-analysis tests:
+    exercises the reference-range-in-report path (Hemoglobin, WBC) and the
+    general-fallback path (Total Cholesterol has no range stated)."""
+    return (
+        "COMPLETE BLOOD COUNT REPORT\n"
+        "Patient: Jane Roe   Age: 52   Sex: F\n"
+        "\n"
+        "Hemoglobin: 10.8 g/dL (12.0-15.5)\n"
+        "WBC Count: 13.2 x10^9/L (4.0-11.0)\n"
+        "Total Cholesterol 185 mg/dL\n"
+    ).encode("utf-8")

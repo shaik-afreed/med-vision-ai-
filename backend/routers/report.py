@@ -26,6 +26,7 @@ from schemas.report import (
     ReportUpdate,
 )
 from services.prediction import predict_disease
+from services.gradcam import generate_gradcam
 from dependencies.auth import get_current_user
 from models.user import User
 from core.config import settings
@@ -141,6 +142,32 @@ async def upload_report(
         result = predict_disease(file_path)
 
         # ==============================
+        # GRAD-CAM EXPLAINABILITY (best-effort)
+        # ==============================
+        # Heatmap generation is a supplementary explainability feature on
+        # top of the prediction above, not part of it: if it fails for any
+        # reason, the report must still save with the prediction that was
+        # already computed, just without a heatmap/explanation attached.
+
+        gradcam_path = None
+        ai_explanation = None
+
+        try:
+            gradcam_filename = f"{os.path.splitext(safe_filename)[0]}_gradcam.png"
+            gradcam_full_path = os.path.join(upload_folder, gradcam_filename)
+
+            ai_explanation = generate_gradcam(
+                file_path,
+                result["disease"],
+                result["pneumonia_probability"],
+                result["threshold"],
+                gradcam_full_path,
+            )
+            gradcam_path = gradcam_full_path
+        except Exception as gradcam_error:
+            print(f"Grad-CAM generation failed for {file_path}: {gradcam_error}")
+
+        # ==============================
         # SAVE REPORT + AI RESULT
         # ==============================
 
@@ -157,6 +184,8 @@ async def upload_report(
             pneumonia_probability=result["pneumonia_probability"],
             threshold_used=result["threshold"],
             model_version=settings.MODEL_VERSION,
+            gradcam_path=gradcam_path,
+            ai_explanation=ai_explanation,
             status="completed",
         )
 
@@ -261,4 +290,30 @@ def get_report_image(
         report.file_path,
         media_type="image/jpeg",
         filename=report.report_name
+    )
+
+
+# ==============================
+# GET REPORT GRAD-CAM HEATMAP
+# ==============================
+
+@router.get("/{report_id}/gradcam")
+def get_report_gradcam(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+
+    report = _get_owned_report(report_id, current_user, db)
+
+    if not report.gradcam_path or not os.path.exists(report.gradcam_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Heatmap not available for this report"
+        )
+
+    return FileResponse(
+        report.gradcam_path,
+        media_type="image/png",
+        filename=f"gradcam_{report.report_name}.png"
     )

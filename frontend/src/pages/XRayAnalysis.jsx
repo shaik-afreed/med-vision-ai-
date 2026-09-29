@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { getPatients, uploadXRay } from "../api/api";
+import { getPatients, uploadXRay, getErrorMessage } from "../api/api";
 import ResultPanel from "../components/ResultPanel";
+import XRayChatbot from "../components/XRayChatbot";
 
 function XRayAnalysis() {
   const [patients, setPatients] = useState([]);
@@ -17,7 +18,7 @@ function XRayAnalysis() {
         setPatients(data.patients || []);
       } catch (error) {
         console.error("Patients API error:", error);
-        setUploadError(error.response?.data?.detail || "Unable to load patients.");
+        setUploadError(getErrorMessage(error, "Unable to load patients."));
       }
     }
 
@@ -67,7 +68,7 @@ function XRayAnalysis() {
       setReport(result.report);
     } catch (error) {
       console.error("X-Ray upload error:", error);
-      setUploadError(error.response?.data?.detail || "X-Ray analysis failed.");
+      setUploadError(getErrorMessage(error, "X-Ray analysis failed."));
     } finally {
       setUploading(false);
     }
@@ -147,6 +148,8 @@ function XRayAnalysis() {
           <ResultPanel report={report} patientName={selectedPatientName} />
         </div>
       </section>
+
+      <XRayChatbot report={report} />
     </>
   );
 }

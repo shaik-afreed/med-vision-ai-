@@ -27,3 +27,6 @@ class Patient(Base):
     reports = relationship(
         "Report", back_populates="patient", cascade="all, delete-orphan"
     )
+    documents = relationship(
+        "MedicalDocument", back_populates="patient", cascade="all, delete-orphan"
+    )

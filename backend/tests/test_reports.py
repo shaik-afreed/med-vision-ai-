@@ -80,6 +80,47 @@ def test_upload_runs_ai_prediction_and_stores_report(client, auth_headers):
     assert listing.json()["total"] == 1
 
 
+def test_upload_generates_gradcam_and_explanation(client, auth_headers):
+    patient_id = _create_patient(client, auth_headers)
+
+    files = {"file": ("xray.jpg", make_test_image_bytes(), "image/jpeg")}
+    data = {"patient_id": str(patient_id), "report_type": "X-Ray"}
+    response = client.post(
+        "/reports/upload", data=data, files=files, headers=auth_headers
+    )
+
+    report = response.json()["report"]
+    assert report["has_gradcam"] is True
+    assert report["ai_explanation"]
+    assert report["prediction"] in report["ai_explanation"]
+
+    gradcam_response = client.get(
+        f"/reports/{report['id']}/gradcam", headers=auth_headers
+    )
+    assert gradcam_response.status_code == 200
+    assert gradcam_response.headers["content-type"] == "image/png"
+    assert len(gradcam_response.content) > 0
+
+
+def test_gradcam_ownership_isolation(client, register_and_login):
+    headers_a, _ = register_and_login()
+    headers_b, _ = register_and_login()
+    patient_id = _create_patient(client, headers_a)
+
+    files = {"file": ("xray.jpg", make_test_image_bytes(), "image/jpeg")}
+    data = {"patient_id": str(patient_id), "report_type": "X-Ray"}
+    upload = client.post(
+        "/reports/upload", data=data, files=files, headers=headers_a
+    ).json()
+    report_id = upload["report"]["id"]
+
+    own_view = client.get(f"/reports/{report_id}/gradcam", headers=headers_a)
+    assert own_view.status_code == 200
+
+    other_view = client.get(f"/reports/{report_id}/gradcam", headers=headers_b)
+    assert other_view.status_code == 404
+
+
 def test_report_image_ownership_isolation(client, register_and_login):
     headers_a, _ = register_and_login()
     headers_b, _ = register_and_login()

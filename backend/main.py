@@ -7,6 +7,8 @@ from routers.home import router as home_router
 from routers.auth import router as auth_router
 from routers.patient import router as patient_router
 from routers.report import router as report_router
+from routers.document import router as document_router
+from routers.chat import router as chat_router
 from routers.model_info import router as model_info_router
 
 from database.database import engine
@@ -47,6 +49,8 @@ app.include_router(home_router)
 app.include_router(auth_router)
 app.include_router(patient_router)
 app.include_router(report_router)
+app.include_router(document_router)
+app.include_router(chat_router)
 app.include_router(model_info_router)
 
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getPatients, getReports, getModelInfo } from "../api/api";
+import { getPatients, getReports, getModelInfo, getErrorMessage } from "../api/api";
 
 function xrayCountFrom(reports) {
   return reports.filter((report) => {
@@ -41,7 +41,7 @@ function Dashboard() {
         setModelInfo(modelInfoData);
       } catch (error) {
         console.error("Dashboard API error:", error);
-        setApiError(error.response?.data?.detail || "Unable to load dashboard data.");
+        setApiError(getErrorMessage(error, "Unable to load dashboard data."));
       } finally {
         setLoadingData(false);
       }

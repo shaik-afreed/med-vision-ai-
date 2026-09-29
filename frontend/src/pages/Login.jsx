@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginUser, registerUser } from "../api/api";
+import { loginUser, registerUser, getErrorMessage } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 
 function Login() {
@@ -36,16 +36,12 @@ function Login() {
       login(data.access_token);
       navigate("/", { replace: true });
     } catch (error) {
-      if (error.response) {
-        setError(
-          error.response.data?.detail ||
-            (mode === "register"
-              ? "Unable to create account."
-              : "Invalid email or password.")
-        );
-      } else {
-        setError("Unable to connect to the server.");
-      }
+      setError(
+        getErrorMessage(
+          error,
+          mode === "register" ? "Unable to create account." : "Invalid email or password."
+        )
+      );
     } finally {
       setLoading(false);
     }

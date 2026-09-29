@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { getReports, getPatients, getReportImageUrl, updateReport } from "../api/api";
+import {
+  getReports,
+  getPatients,
+  getReportImageUrl,
+  updateReport,
+  getErrorMessage,
+} from "../api/api";
 import ResultPanel from "../components/ResultPanel";
 import { formatPercent } from "../utils/format";
 
@@ -34,7 +40,7 @@ function MedicalReports() {
       setPatients(patientsData.patients || []);
     } catch (error) {
       console.error("Reports API error:", error);
-      setError(error.response?.data?.detail || "Unable to load medical reports.");
+      setError(getErrorMessage(error, "Unable to load medical reports."));
     } finally {
       setLoading(false);
     }

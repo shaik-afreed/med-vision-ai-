@@ -35,6 +35,11 @@ numpy==1.23.5
 Pillow==11.3.0
 
 # ==============================
+# Written medical report analysis (services/document_analysis.py):
+# text extraction from uploaded PDF lab/medical reports
+# ==============================
+pypdf==6.19.0
+# ==============================
 # Testing
 # ==============================
 pytest==9.1.1

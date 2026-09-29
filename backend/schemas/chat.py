@@ -1,0 +1,37 @@
+from typing import Literal
+
+from pydantic import BaseModel, Field, model_validator
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class ChatRequest(BaseModel):
+    report_id: int | None = None
+    messages: list[ChatMessage] = Field(min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def check_turn_order(self):
+        for index, message in enumerate(self.messages):
+            expected = "user" if index % 2 == 0 else "assistant"
+            if message.role != expected:
+                raise ValueError(
+                    "messages must alternate user/assistant, starting with user"
+                )
+        if self.messages[-1].role != "user":
+            raise ValueError("the last message must be from the user")
+        return self
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    source: Literal["local_llm", "builtin"]
+    model: str | None = None
+
+
+class ChatStatusResponse(BaseModel):
+    llm_running: bool
+    llm_available: bool
+    model: str

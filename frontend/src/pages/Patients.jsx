@@ -4,6 +4,7 @@ import {
   createPatient,
   updatePatient,
   deletePatient as deletePatientRequest,
+  getErrorMessage,
 } from "../api/api";
 function Patients() {
 
@@ -52,8 +53,7 @@ function Patients() {
       );
 
       setError(
-        error.response?.data?.detail ||
-        "Unable to load patients."
+        getErrorMessage(error, "Unable to load patients.")
       );
 
     } finally {
@@ -178,8 +178,7 @@ function Patients() {
       );
 
       setError(
-        error.response?.data?.detail ||
-        "Unable to save patient."
+        getErrorMessage(error, "Unable to save patient.")
       );
 
     }
@@ -218,8 +217,7 @@ function Patients() {
       );
 
       setError(
-        error.response?.data?.detail ||
-        "Unable to delete patient."
+        getErrorMessage(error, "Unable to delete patient.")
       );
 
     }
