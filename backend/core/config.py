@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     # either a JSON list or a comma-separated list, e.g.
     #   CORS_ORIGINS=https://my-app.vercel.app,http://localhost:5173
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [
+        "https://med-vision-ai-indol.vercel.app",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5174",
