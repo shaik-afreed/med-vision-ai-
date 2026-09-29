@@ -542,33 +542,33 @@ function Patients() {
 
                   <tr key={patient.id}>
 
-                    <td>
+                    <td data-label="ID">
                       #{String(patient.id).padStart(3, "0")}
                     </td>
 
-                    <td>
+                    <td data-label="Patient">
                       <strong>
                         {patient.full_name}
                       </strong>
                     </td>
 
-                    <td>
+                    <td data-label="Age">
                       {patient.age}
                     </td>
 
-                    <td>
+                    <td data-label="Gender">
                       {patient.gender}
                     </td>
 
-                    <td>
+                    <td data-label="Phone">
                       {patient.phone}
                     </td>
 
-                    <td>
+                    <td data-label="Disease">
                       {patient.disease || "—"}
                     </td>
 
-                    <td>
+                    <td data-label="Actions">
 
                       <button
                         className="table-edit-button"

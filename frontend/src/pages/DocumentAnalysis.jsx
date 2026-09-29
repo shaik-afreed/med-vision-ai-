@@ -90,18 +90,18 @@ function DocumentResult({ document, patientName }) {
             <tbody>
               {document.findings.map((finding, index) => (
                 <tr key={index}>
-                  <td>{finding.test}</td>
-                  <td>
+                  <td data-label="Test">{finding.test}</td>
+                  <td data-label="Value">
                     {finding.value}
                     {finding.unit ? ` ${finding.unit}` : ""}
                   </td>
-                  <td>{finding.reference_range || "—"}</td>
-                  <td>
+                  <td data-label="Reference range">{finding.reference_range || "—"}</td>
+                  <td data-label="Source">
                     {finding.reference_source === "report"
                       ? "This report"
                       : "General fallback"}
                   </td>
-                  <td className={statusClass(finding.status)}>
+                  <td data-label="Status" className={statusClass(finding.status)}>
                     {finding.status}
                   </td>
                 </tr>

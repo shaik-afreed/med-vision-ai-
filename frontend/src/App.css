@@ -496,14 +496,110 @@ button {
   }
 }
 
+/* Mobile top bar + drawer controls exist only on small screens. */
+.mobile-topbar,
+.sidebar-close {
+  display: none;
+}
+
 @media (max-width: 750px) {
 
+  .app {
+    flex-direction: column;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    padding: 10px 16px;
+    background: #ffffff;
+    border-bottom: 1px solid #e6e9ef;
+  }
+
+  .mobile-topbar .brand-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .mobile-topbar strong {
+    font-size: 17px;
+  }
+
+  .menu-toggle {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #172033;
+  }
+
+  /* Sidebar becomes an off-canvas drawer. visibility keeps the hidden
+     drawer's links out of the keyboard tab order. */
   .sidebar {
-    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 85vw);
+    z-index: 1100;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+  }
+
+  .sidebar-close {
+    display: block;
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    color: #687286;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(15, 23, 42, 0.45);
   }
 
   .main-content {
-    padding: 20px;
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    padding: 16px;
+  }
+
+  /* Report rows: icon + details on the first line, result + action below. */
+  .report-item {
+    flex-wrap: wrap;
+  }
+
+  .report-info {
+    flex: 1 1 calc(100% - 60px);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .report-result {
+    flex: 1;
+    min-width: 0;
   }
 
   .topbar {
@@ -1265,12 +1361,89 @@ button {
 }
 
 @media (max-width: 750px) {
+  .page-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .page-header h2 {
+    font-size: 22px;
+  }
+
+  .page-header button {
+    white-space: nowrap;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
 
   .ai-result-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ================= TABLES ON SMALL SCREENS ================= */
+/* Each row becomes a card; td[data-label] supplies the column name. */
+
+@media (max-width: 900px) {
+  .patients-table thead,
+  .document-findings-table thead {
+    display: none;
+  }
+
+  .patients-table,
+  .patients-table tbody,
+  .patients-table tr,
+  .patients-table td,
+  .document-findings-table,
+  .document-findings-table tbody,
+  .document-findings-table tr,
+  .document-findings-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .patients-table tr,
+  .document-findings-table tr {
+    border: 1px solid #e8ebf0;
+    border-radius: 10px;
+    padding: 6px 12px;
+    margin-bottom: 10px;
+    background: #ffffff;
+  }
+
+  .patients-table td,
+  .document-findings-table td {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 0;
+    text-align: right;
+    border-bottom: 1px solid #f0f2f6;
+    overflow-wrap: anywhere;
+  }
+
+  .patients-table td:last-child,
+  .document-findings-table td:last-child {
+    border-bottom: none;
+  }
+
+  .patients-table td::before,
+  .document-findings-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    margin-right: auto;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #8992a4;
   }
 }
 
