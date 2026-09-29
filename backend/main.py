@@ -1,7 +1,10 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import settings
+from database.migrate import run_migrations
 
 from routers.home import router as home_router
 from routers.auth import router as auth_router
@@ -15,10 +18,18 @@ from database.database import engine
 
 # Schema is managed by Alembic migrations (see alembic/), not
 # Base.metadata.create_all(). Run `alembic upgrade head` before starting
-# the server, including on a fresh clone.
+# the server, including on a fresh clone - or set AUTO_MIGRATE=true to have
+# the server apply them itself at startup (used on the Render deployment).
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if settings.AUTO_MIGRATE:
+        run_migrations()
+    yield
 
 
 app = FastAPI(
+    lifespan=lifespan,
     title=settings.APP_NAME,
     description=(
         "AI-assisted chest X-ray screening platform. "

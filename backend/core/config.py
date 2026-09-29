@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # DATABASE
     # ==============================
     DATABASE_URL: str = "sqlite:///./medivision.db"
+    # Apply Alembic migrations when the server starts. Off by default (local
+    # dev runs `alembic upgrade head` by hand). Turn on for hosts where you
+    # can't add that step to the start command, e.g. AUTO_MIGRATE=true.
+    AUTO_MIGRATE: bool = False
 
     # ==============================
     # AUTH
