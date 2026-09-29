@@ -53,6 +53,15 @@ def isolated_upload_dir(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def reset_login_limiter():
+    from utils import login_limiter
+
+    login_limiter.clear_all()
+    yield
+    login_limiter.clear_all()
+
+
+@pytest.fixture(autouse=True)
 def local_llm_offline(monkeypatch):
     """Tests never depend on (or talk to) a real local Ollama server;
     chatbot tests that need the LLM path install a stub explicitly."""

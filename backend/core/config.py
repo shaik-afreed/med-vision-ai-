@@ -1,7 +1,10 @@
+import json
 import secrets
 from functools import lru_cache
+from typing import Annotated
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -25,18 +28,20 @@ class Settings(BaseSettings):
     # ==============================
     # AUTH
     # ==============================
-    # No default in production: if SECRET_KEY isn't set via .env/env var,
-    # a random one is generated at startup. That's fine for a single dev
-    # process, but it means tokens won't survive a restart and won't be
-    # shared across workers - set SECRET_KEY explicitly outside local dev.
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    # Signs login tokens. In development a random key is generated if unset
+    # (tokens then don't survive a restart). With ENVIRONMENT=production the
+    # app refuses to start without one - see require_secret_key_in_production.
+    SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # ==============================
     # CORS
     # ==============================
-    CORS_ORIGINS: list[str] = [
+    # Frontend addresses allowed to call this API. From an env var, accepts
+    # either a JSON list or a comma-separated list, e.g.
+    #   CORS_ORIGINS=https://my-app.vercel.app,http://localhost:5173
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5174",
@@ -65,6 +70,27 @@ class Settings(BaseSettings):
     # drops any .env variable that isn't declared as a field).
     LOCAL_LLM_URL: str = "http://127.0.0.1:11434"
     LOCAL_LLM_MODEL: str = "qwen2.5:7b"
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value):
+        if isinstance(value, str):
+            text = value.strip()
+            value = json.loads(text) if text.startswith("[") else text.split(",")
+        # Browsers send the Origin header without a trailing slash, so a
+        # pasted "https://my-app.vercel.app/" would otherwise never match.
+        return [origin.strip().rstrip("/") for origin in value if origin.strip()]
+
+    @model_validator(mode="after")
+    def require_secret_key_in_production(self):
+        if not self.SECRET_KEY:
+            if self.ENVIRONMENT.lower() == "production":
+                raise ValueError(
+                    "SECRET_KEY must be set when ENVIRONMENT=production. Generate "
+                    "one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                )
+            self.SECRET_KEY = secrets.token_urlsafe(32)
+        return self
 
 
 @lru_cache

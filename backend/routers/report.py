@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 
@@ -31,6 +32,7 @@ from dependencies.auth import get_current_user
 from models.user import User
 from core.config import settings
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/reports",
@@ -165,7 +167,7 @@ async def upload_report(
             )
             gradcam_path = gradcam_full_path
         except Exception as gradcam_error:
-            print(f"Grad-CAM generation failed for {file_path}: {gradcam_error}")
+            logger.warning("Grad-CAM generation failed for %s: %s", file_path, gradcam_error)
 
         # ==============================
         # SAVE REPORT + AI RESULT
@@ -202,16 +204,19 @@ async def upload_report(
         db.rollback()
         raise
 
-    except Exception as e:
+    except Exception:
 
         db.rollback()
 
         if os.path.exists(file_path):
             os.remove(file_path)
 
+        # Full traceback goes to the server log only; the client gets a
+        # generic message so internal paths/details aren't exposed.
+        logger.exception("X-ray report processing failed")
         raise HTTPException(
             status_code=500,
-            detail=f"Report processing failed: {str(e)}"
+            detail="Report processing failed due to a server error. Please try again."
         )
 
     finally:

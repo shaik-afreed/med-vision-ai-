@@ -1,3 +1,6 @@
+import math
+
+from utils import login_limiter
 from utils.jwt_handler import create_access_token, verify_access_token
 from utils.security import hash_password, verify_password
 from database.database import get_db
@@ -53,24 +56,34 @@ def login(
     db: Session = Depends(get_db)
 ):
 
+    limiter_key = form_data.username.strip().lower()
+    wait_seconds = login_limiter.retry_after_seconds(limiter_key)
+
+    if wait_seconds:
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "Too many failed login attempts. Try again in "
+                f"{math.ceil(wait_seconds / 60)} minute(s)."
+            ),
+            headers={"Retry-After": str(wait_seconds)},
+        )
+
     existing_user = db.query(User).filter(
         User.email == form_data.username
     ).first()
 
-    if not existing_user:
+    if not existing_user or not verify_password(
+        form_data.password,
+        existing_user.password
+    ):
+        login_limiter.record_failure(limiter_key)
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password"
         )
 
-    if not verify_password(
-        form_data.password,
-        existing_user.password
-    ):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password"
-        )
+    login_limiter.reset(limiter_key)
 
     access_token = create_access_token(
         data={

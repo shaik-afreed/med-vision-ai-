@@ -33,7 +33,10 @@ websockets==16.1
 # in-process; versions pinned to match ai_model/requirements.txt so
 # training/evaluation and production inference behave identically)
 # ==============================
-tensorflow==2.13.0
+# 2.15.1: last TensorFlow on Keras 2 (the saved .h5 model's format) and the
+# first without 2.13's typing-extensions<4.6 cap, which made a clean install
+# impossible alongside pydantic 2.
+tensorflow==2.15.1
 numpy==1.23.5
 Pillow==11.3.0
 

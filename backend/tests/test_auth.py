@@ -72,3 +72,38 @@ def test_profile_returns_current_user(client, auth_headers):
     response = client.get("/auth/profile", headers=auth_headers)
     assert response.status_code == 200
     assert "@" in response.json()["email"]
+
+
+def test_login_locks_out_after_repeated_failures(client, register_and_login):
+    _, email = register_and_login()
+
+    for _ in range(5):
+        response = client.post(
+            "/auth/login", data={"username": email, "password": "wrongpass1"}
+        )
+        assert response.status_code == 401
+
+    # Locked out: even the correct password is refused until the window passes.
+    response = client.post(
+        "/auth/login", data={"username": email, "password": "testpass123"}
+    )
+    assert response.status_code == 429
+    assert "Retry-After" in response.headers
+
+
+def test_successful_login_resets_failure_count(client, register_and_login):
+    _, email = register_and_login()
+
+    for _ in range(4):
+        client.post("/auth/login", data={"username": email, "password": "wrongpass1"})
+
+    ok = client.post("/auth/login", data={"username": email, "password": "testpass123"})
+    assert ok.status_code == 200
+
+    for _ in range(4):
+        client.post("/auth/login", data={"username": email, "password": "wrongpass1"})
+
+    still_ok = client.post(
+        "/auth/login", data={"username": email, "password": "testpass123"}
+    )
+    assert still_ok.status_code == 200

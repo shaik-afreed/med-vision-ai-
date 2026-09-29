@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import uuid
 
@@ -27,6 +28,7 @@ from dependencies.auth import get_current_user
 from models.user import User
 from core.config import settings
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/documents",
@@ -162,16 +164,19 @@ async def upload_document(
         db.rollback()
         raise
 
-    except Exception as e:
+    except Exception:
 
         db.rollback()
 
         if os.path.exists(file_path):
             os.remove(file_path)
 
+        # Full traceback goes to the server log only; the client gets a
+        # generic message so internal paths/details aren't exposed.
+        logger.exception("Medical document processing failed")
         raise HTTPException(
             status_code=500,
-            detail=f"Document processing failed: {str(e)}"
+            detail="Document processing failed due to a server error. Please try again."
         )
 
     finally:
