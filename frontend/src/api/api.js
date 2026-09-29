@@ -1,6 +1,12 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+// Set VITE_API_BASE_URL at build time (e.g. in Vercel's project settings) to
+// the deployed backend URL. A pasted trailing slash is stripped so request
+// paths don't become "//patients".
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(
+  /\/+$/,
+  ""
+);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
