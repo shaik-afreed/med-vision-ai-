@@ -28,13 +28,30 @@ function Login() {
       if (!cancelled) setServerState((state) => (state === "checking" ? "waking" : state));
     }, 2500);
 
-    pingServer()
-      .then(() => !cancelled && setServerState((state) => (state === "waking" ? "woke" : "ready")))
-      .catch(() => !cancelled && setServerState("unreachable"));
+    // While a sleeping host starts it answers with a temporary error, so a
+    // failed ping is retried for about two minutes before giving up.
+    const startedAt = Date.now();
+    let retryTimer;
+
+    const check = () => {
+      pingServer()
+        .then(() => !cancelled && setServerState((state) => (state === "waking" ? "woke" : "ready")))
+        .catch(() => {
+          if (cancelled) return;
+          if (Date.now() - startedAt > 120000) {
+            setServerState("unreachable");
+          } else {
+            setServerState("waking");
+            retryTimer = setTimeout(check, 4000);
+          }
+        });
+    };
+    check();
 
     return () => {
       cancelled = true;
       clearTimeout(slowTimer);
+      clearTimeout(retryTimer);
     };
   }, []);
 
@@ -69,6 +86,9 @@ function Login() {
       login(data.access_token);
       navigate("/", { replace: true });
     } catch (error) {
+      // Any HTTP answer (even a 401) proves the server is up, so drop a stale
+      // "can't reach the server" notice.
+      if (error?.response) setServerState("ready");
       setError(
         getErrorMessage(
           error,
@@ -220,7 +240,7 @@ function Login() {
 
             {serverState === "unreachable" && (
               <div className="server-status unreachable" role="status">
-                Can't reach the server right now. You can still try to sign in; it will retry.
+                Can't reach the server. Check your connection, then try signing in again.
               </div>
             )}
 
