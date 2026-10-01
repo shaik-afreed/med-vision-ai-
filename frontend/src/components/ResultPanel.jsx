@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { formatPercent } from "../utils/format";
 import { getReportGradcamUrl, downloadReportPdf, getErrorMessage } from "../api/api";
+import Icon from "./Icon";
+import ProbabilityMeter from "./ProbabilityMeter";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -55,6 +57,7 @@ export default function ResultPanel({ report, patientName }) {
   // A borderline score is not a reassuring "Normal" and must not look like one.
   const isBorderline = assessment?.category === "inconclusive";
   const panelTone = isBorderline ? "borderline-result" : isPneumonia ? "pneumonia-result" : "normal-result";
+  const toneIcon = isBorderline ? "alert" : isPneumonia ? "alert" : "check";
 
   async function handleDownloadPdf() {
     setPdfError("");
@@ -71,8 +74,16 @@ export default function ResultPanel({ report, patientName }) {
   return (
     <div className={`ai-result-panel ${panelTone}`}>
       <div className="ai-result-header">
-        <strong>AI Screening Result</strong>
-        <span className="ai-result-badge">{report.prediction || "Pending"}</span>
+        <div className="ai-result-title">
+          <span className="ai-result-icon">
+            <Icon name={toneIcon} size={18} />
+          </span>
+          <strong>AI Screening Result</strong>
+        </div>
+        <span className="ai-result-badge">
+          {report.prediction || "Pending"}
+          {isBorderline ? " · borderline" : ""}
+        </span>
       </div>
 
       {assessment && (
@@ -87,6 +98,11 @@ export default function ResultPanel({ report, patientName }) {
           )}
         </div>
       )}
+
+      <ProbabilityMeter
+        probability={report.pneumonia_probability}
+        thresholdPercent={report.threshold_used != null ? report.threshold_used * 100 : undefined}
+      />
 
       <div className="ai-result-grid">
         <div>
@@ -152,7 +168,7 @@ export default function ResultPanel({ report, patientName }) {
               Heatmap could not be loaded for this report.
             </p>
           ) : (
-            <p className="ai-result-heatmap-unavailable">Loading heatmap...</p>
+            <div className="skeleton skeleton-image" aria-label="Loading heatmap" />
           )}
 
           <small>
@@ -165,6 +181,7 @@ export default function ResultPanel({ report, patientName }) {
 
       <div className="ai-result-actions">
         <button type="button" className="primary-button" onClick={handleDownloadPdf} disabled={pdfBusy}>
+          <Icon name="download" size={17} />
           {pdfBusy ? "Preparing report..." : "Download report (PDF)"}
         </button>
         {pdfError && <span className="ai-result-pdf-error">{pdfError}</span>}

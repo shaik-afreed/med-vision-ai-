@@ -6,10 +6,10 @@ module.exports = defineConfig({
   workers: 1,
   retries: 0,
   reporter: [["list"]],
-  timeout: 30_000,
+  timeout: 180_000,
 
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "http://127.0.0.1:5173",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -35,7 +35,7 @@ module.exports = defineConfig({
     {
       command: "npm run dev",
       cwd: "../frontend",
-      url: "http://localhost:5173",
+      url: "http://127.0.0.1:5173",
       timeout: 60_000,
       reuseExistingServer: !process.env.CI,
     },

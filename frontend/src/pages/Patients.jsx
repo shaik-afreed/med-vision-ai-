@@ -6,6 +6,9 @@ import {
   deletePatient as deletePatientRequest,
   getErrorMessage,
 } from "../api/api";
+import PageHeader from "../components/PageHeader";
+import Icon from "../components/Icon";
+
 function Patients() {
 
   const [patients, setPatients] = useState([]);
@@ -232,27 +235,11 @@ function Patients() {
           PAGE HEADER
       ============================== */}
 
-      <div className="patients-header">
-
-        <div>
-
-          <h2>Patients</h2>
-
-          <p>
-            Manage patient information and records.
-          </p>
-
-        </div>
-
-
-        <button
-          className="primary-button"
-          onClick={openAddForm}
-        >
+      <PageHeader title="Patients" subtitle="Manage patient information and records.">
+        <button className="primary-button" onClick={openAddForm}>
           + Add Patient
         </button>
-
-      </div>
+      </PageHeader>
 
 
       {/* ==============================
@@ -261,8 +248,9 @@ function Patients() {
 
       {error && (
 
-        <div className="api-error">
-          ⚠ {error}
+        <div className="api-error" role="alert">
+          <Icon name="alert" size={18} />
+          <span>{error}</span>
         </div>
 
       )}

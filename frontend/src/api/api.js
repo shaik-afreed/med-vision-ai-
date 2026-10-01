@@ -53,6 +53,10 @@ api.interceptors.response.use(
 // validation (422) errors; rendering that list directly would crash React.
 
 export function getErrorMessage(error, fallback) {
+  if (error?.code === "ECONNABORTED") {
+    return "The server took too long to respond. It may be waking up - please try again in a moment.";
+  }
+
   if (!error?.response) {
     return `Cannot reach the MediVision server at ${API_BASE_URL}. Make sure the backend is running, then try again.`;
   }
@@ -66,8 +70,29 @@ export function getErrorMessage(error, fallback) {
 }
 
 // ========================================
+// SERVER WAKE-UP
+// ========================================
+// Free hosting puts an idle backend to sleep; the first request then waits
+// for it to start. The sign-in page pings /health as soon as it opens so the
+// server is already waking while the user types their credentials.
+
+export async function pingServer() {
+  const response = await fetch(`${API_BASE_URL}/health`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Health check returned ${response.status}`);
+}
+
+// Starts loading the AI model on the server in the background so the first
+// X-ray analysis doesn't wait for it. Fire-and-forget.
+export async function warmUpModel() {
+  await api.post("/model/warmup");
+}
+
+// ========================================
 // AUTH
 // ========================================
+
+// A sleeping free-tier backend can need about a minute on the first request.
+const AUTH_TIMEOUT_MS = 120000;
 
 export async function loginUser(email, password) {
   const formData = new URLSearchParams();
@@ -76,13 +101,18 @@ export async function loginUser(email, password) {
 
   const response = await api.post("/auth/login", formData, {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    timeout: AUTH_TIMEOUT_MS,
   });
 
   return response.data;
 }
 
 export async function registerUser(name, email, password) {
-  const response = await api.post("/auth/register", { name, email, password });
+  const response = await api.post(
+    "/auth/register",
+    { name, email, password },
+    { timeout: AUTH_TIMEOUT_MS }
+  );
   return response.data;
 }
 

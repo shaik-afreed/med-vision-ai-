@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getPatients,
   uploadDocument,
@@ -6,6 +6,9 @@ import {
   getDocumentFileUrl,
   getErrorMessage,
 } from "../api/api";
+import Dropzone from "../components/Dropzone";
+import Icon from "../components/Icon";
+import PageHeader from "../components/PageHeader";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -144,9 +147,17 @@ function DocumentAnalysis() {
   const [uploading, setUploading] = useState(false);
   const [document, setDocument] = useState(null);
   const [uploadError, setUploadError] = useState("");
+  const resultRef = useRef(null);
 
   const [pastDocuments, setPastDocuments] = useState([]);
   const [loadingPast, setLoadingPast] = useState(true);
+
+  // On narrow screens the result sits below the upload card, out of view.
+  useEffect(() => {
+    if (document && window.matchMedia("(max-width: 1180px)").matches) {
+      resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [document]);
 
   useEffect(() => {
     async function loadPatients() {
@@ -175,9 +186,7 @@ function DocumentAnalysis() {
     loadPastDocuments();
   }, []);
 
-  function handleFileChange(event) {
-    const file = event.target.files?.[0];
-
+  function handleFile(file) {
     setUploadError("");
     setDocument(null);
 
@@ -241,80 +250,107 @@ function DocumentAnalysis() {
 
   return (
     <>
-      <section className="page-header">
-        <div>
-          <h2>Medical Report Analysis</h2>
-          <p>
-            Upload a written medical/lab report (PDF or text) to extract and
-            flag its lab values.
-          </p>
-        </div>
-        <span className="status-badge">● Analyzer Online</span>
-      </section>
+      <PageHeader
+        title="Medical Report Analysis"
+        subtitle="Upload a written medical/lab report (PDF or text) to extract and flag its lab values."
+      >
+        <span className="status-badge">
+          <span className="status-dot" /> Analyzer Online
+        </span>
+      </PageHeader>
 
-      <section className="panel analysis-panel">
-        <div className="panel-header">
-          <div>
-            <h3>Analyze a Medical Report</h3>
-            <p>
-              Supports text-based PDF and .txt files. Scanned/image-only
-              PDFs have no text layer to extract from (no OCR).
-            </p>
+      <div className="analysis-layout">
+        <section className="panel analysis-panel">
+          <div className="panel-header">
+            <div>
+              <h3>Analyze a Medical Report</h3>
+              <p>Supports text-based PDF and .txt files. Scanned/image-only PDFs have no text layer to read.</p>
+            </div>
           </div>
-        </div>
 
-        <div className="upload-area">
-          <div className="upload-icon">📄</div>
-          <h4>Upload Medical Report</h4>
-          <p>Upload a PDF or plain text lab/medical report for analysis.</p>
+          <div className="form-group">
+            <label htmlFor="document-patient">Patient</label>
+            <select
+              id="document-patient"
+              value={selectedPatient}
+              onChange={(event) => setSelectedPatient(event.target.value)}
+              className="patient-select"
+            >
+              <option value="">Select Patient</option>
 
-          <select
-            value={selectedPatient}
-            onChange={(event) => setSelectedPatient(event.target.value)}
-            className="patient-select"
-          >
-            <option value="">Select Patient</option>
-
-            {patients.length > 0 ? (
-              patients.map((patient) => (
-                <option key={patient.id} value={String(patient.id)}>
-                  #{String(patient.id).padStart(3, "0")} - {patient.full_name}
+              {patients.length > 0 ? (
+                patients.map((patient) => (
+                  <option key={patient.id} value={String(patient.id)}>
+                    #{String(patient.id).padStart(3, "0")} - {patient.full_name}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>
+                  No patients available
                 </option>
-              ))
-            ) : (
-              <option value="" disabled>
-                No patients available
-              </option>
-            )}
-          </select>
+              )}
+            </select>
+          </div>
 
-          <label className="file-select-button">
-            {selectedFile ? "Change Report" : "Select Report"}
-            <input
-              type="file"
-              accept=".pdf,.txt,application/pdf,text/plain"
-              onChange={handleFileChange}
-              hidden
-            />
-          </label>
+          <Dropzone
+            accept=".pdf,.txt,application/pdf,text/plain"
+            file={selectedFile}
+            onFile={handleFile}
+            icon="fileText"
+            title="Upload Medical Report"
+            changeTitle="Change Report"
+            hint="Drag and drop, or click to browse. PDF or .txt."
+          />
 
-          {selectedFile && <div className="selected-file">📄 {selectedFile.name}</div>}
+          {selectedFile && (
+            <div className="selected-file">
+              <Icon name="fileText" size={16} />
+              {selectedFile.name}
+            </div>
+          )}
 
-          {uploadError && <div className="upload-error">{uploadError}</div>}
+          {uploadError && (
+            <div className="upload-error" role="alert">
+              {uploadError}
+            </div>
+          )}
 
           <button
-            className="primary-button"
+            className="primary-button button-block"
             onClick={handleAnalyzeDocument}
             disabled={uploading}
           >
             {uploading ? "Analyzing Report..." : "Analyze Report"}
           </button>
 
-          <small>Text extraction • Reference-range flagging</small>
+          <small className="panel-footnote">Text extraction and reference-range flagging.</small>
+        </section>
 
-          <DocumentResult document={document} patientName={selectedPatientName} />
-        </div>
-      </section>
+        <section className="analysis-result" aria-live="polite" ref={resultRef}>
+          {document ? (
+            <DocumentResult document={document} patientName={selectedPatientName} />
+          ) : uploading ? (
+            <div className="result-placeholder">
+              <span className="spinner" aria-hidden="true" />
+              <h3>Reading the report</h3>
+              <p>Extracting text and checking each value against its reference range.</p>
+            </div>
+          ) : (
+            <div className="result-placeholder">
+              <div className="empty-icon">
+                <Icon name="sparkles" size={26} />
+              </div>
+              <h3>Your analysis will appear here</h3>
+              <p>Upload a lab report and you will see:</p>
+              <ul>
+                <li>Every recognized value with its reference range</li>
+                <li>Which values are low or high, and the source of the range</li>
+                <li>A short summary and the extracted text</li>
+              </ul>
+            </div>
+          )}
+        </section>
+      </div>
 
       <section className="panel">
         <div className="panel-header">
@@ -324,17 +360,40 @@ function DocumentAnalysis() {
           </div>
         </div>
 
-        {loadingPast && <div className="empty-state">Loading reports...</div>}
+        {loadingPast && (
+          <div className="reports-list">
+            {[0, 1].map((key) => (
+              <div className="report-item" key={key}>
+                <span className="skeleton skeleton-avatar" />
+                <div className="report-info">
+                  <span className="skeleton skeleton-text" />
+                  <span className="skeleton skeleton-text short" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {!loadingPast && pastDocuments.length === 0 && (
-          <div className="empty-state">No medical reports analyzed yet.</div>
+          <div className="empty-state">
+            <div className="empty-icon">
+              <Icon name="fileText" size={26} />
+            </div>
+            <h3>No medical reports analyzed yet</h3>
+            <p>Upload a lab report above to get started.</p>
+          </div>
         )}
 
         {!loadingPast && pastDocuments.length > 0 && (
           <div className="reports-list">
             {pastDocuments.map((pastDocument) => (
-              <div className="report-item" key={pastDocument.id}>
-                <div className="report-icon">📄</div>
+              <div
+                className={`report-item ${document?.id === pastDocument.id ? "selected" : ""}`}
+                key={pastDocument.id}
+              >
+                <div className="report-icon">
+                  <Icon name="fileText" size={20} />
+                </div>
 
                 <div className="report-info">
                   <strong>{pastDocument.file_name}</strong>

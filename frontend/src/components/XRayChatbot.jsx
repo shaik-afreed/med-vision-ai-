@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getChatStatus, sendChatMessage, getErrorMessage } from "../api/api";
 import { formatPercent } from "../utils/format";
+import Icon from "./Icon";
 
 // The backend accepts at most 20 messages, alternating and starting with
 // the user; an odd-length tail always starts with a user turn.
@@ -99,7 +100,10 @@ export default function XRayChatbot({ report }) {
       {open && (
         <section className="chatbot-panel" aria-label="MediVision AI assistant">
           <header className="chatbot-header">
-            <div>
+            <span className="chatbot-avatar">
+              <Icon name="sparkles" size={18} />
+            </span>
+            <div className="chatbot-header-text">
               <strong>MediVision Assistant</strong>
               <span>AI explanations · not a diagnosis</span>
             </div>
@@ -109,7 +113,7 @@ export default function XRayChatbot({ report }) {
               onClick={() => setOpen(false)}
               aria-label="Close chat"
             >
-              ×
+              <Icon name="x" size={20} />
             </button>
           </header>
 
@@ -191,7 +195,8 @@ export default function XRayChatbot({ report }) {
               className="primary-button"
               disabled={!status || sending || !input.trim()}
             >
-              Send
+              <Icon name="arrowRight" size={18} />
+              <span>Send</span>
             </button>
           </form>
         </section>
@@ -204,7 +209,7 @@ export default function XRayChatbot({ report }) {
         aria-label={open ? "Close AI assistant" : "Open AI assistant"}
         aria-expanded={open}
       >
-        {open ? "×" : "💬"}
+        <Icon name={open ? "x" : "chat"} size={22} />
         {!open && <span>Ask AI</span>}
       </button>
     </>

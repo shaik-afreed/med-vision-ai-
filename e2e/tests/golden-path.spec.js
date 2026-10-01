@@ -63,10 +63,11 @@ test.describe("MediVision AI - golden path", () => {
     await page.getByRole("button", { name: "Analyze X-Ray" }).click();
 
     const resultPanel = page.locator(".ai-result-panel");
-    await expect(resultPanel).toBeVisible({ timeout: 20_000 });
+    // The first analysis after server start also loads the model lazily.
+    await expect(resultPanel).toBeVisible({ timeout: 120_000 });
     await expect(resultPanel.locator(".ai-result-badge")).toHaveText(/Pneumonia|Normal/);
-    await expect(resultPanel.getByText("Pneumonia probability")).toBeVisible();
-    await expect(resultPanel.getByText("Operating threshold")).toBeVisible();
+    await expect(resultPanel.getByText("Pneumonia probability", { exact: true })).toBeVisible();
+    await expect(resultPanel.getByText("Operating threshold", { exact: true })).toBeVisible();
     await expect(
       resultPanel.getByText(/not a confirmed medical diagnosis/i)
     ).toBeVisible();

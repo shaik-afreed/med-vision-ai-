@@ -1,22 +1,32 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { warmUpModel } from "../api/api";
+import { initialsOf, useAuth } from "../context/AuthContext";
+import Icon from "./Icon";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: "⌂", end: true },
-  { to: "/patients", label: "Patients", icon: "♙" },
-  { to: "/xray", label: "X-Ray Analysis", icon: "▣" },
-  { to: "/documents", label: "Report Analysis", icon: "📄" },
-  { to: "/reports", label: "Medical Reports", icon: "▤" },
+  { to: "/", label: "Dashboard", short: "Home", icon: "home", end: true },
+  { to: "/patients", label: "Patients", short: "Patients", icon: "users" },
+  { to: "/xray", label: "X-Ray Analysis", short: "X-Ray", icon: "scan" },
+  { to: "/documents", label: "Report Analysis", short: "Lab", icon: "fileText" },
+  { to: "/reports", label: "Medical Reports", short: "Reports", icon: "folder" },
 ];
 
+function BrandMark({ size = 40 }) {
+  return (
+    <div className="brand-icon" style={{ width: size, height: size }}>
+      <Icon name="activity" size={Math.round(size * 0.55)} strokeWidth={2.2} />
+    </div>
+  );
+}
+
 function Sidebar({ open, onClose }) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   return (
     <aside id="app-sidebar" className={`sidebar ${open ? "open" : ""}`}>
       <div className="brand">
-        <div className="brand-icon">M</div>
+        <BrandMark />
         <div>
           <h1>MediVision</h1>
           <span>AI Healthcare</span>
@@ -27,47 +37,52 @@ function Sidebar({ open, onClose }) {
           onClick={onClose}
           aria-label="Close navigation menu"
         >
-          ×
+          <Icon name="x" size={22} />
         </button>
       </div>
 
-      <nav className="navigation">
+      <nav className="navigation" aria-label="Main">
+        <span className="nav-section">Workspace</span>
+
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.end}
             onClick={onClose}
-            className={({ isActive }) =>
-              `nav-item ${isActive ? "active" : ""}`
-            }
+            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
-            <span>{item.icon}</span>
-            {item.label}
+            <Icon name={item.icon} size={19} />
+            <span>{item.label}</span>
           </NavLink>
         ))}
+      </nav>
+
+      <div className="sidebar-bottom">
+        <div className="sidebar-note">
+          <Icon name="shield" size={16} />
+          <span>Screening aid only. Every result needs clinician review.</span>
+        </div>
+
+        <div className="user-card">
+          <div className="avatar">{initialsOf(user?.name)}</div>
+          <div className="user-card-text">
+            <strong>{user?.name || "Doctor"}</strong>
+            <span>{user?.email || "Medical staff"}</span>
+          </div>
+        </div>
 
         <button
-          className="nav-item"
+          className="nav-item sign-out"
           onClick={() => {
             onClose();
             logout();
           }}
           type="button"
         >
-          <span>⏻</span>
-          Sign Out
+          <Icon name="logOut" size={19} />
+          <span>Sign Out</span>
         </button>
-      </nav>
-
-      <div className="sidebar-bottom">
-        <div className="user-card">
-          <div className="avatar">DR</div>
-          <div>
-            <strong>Doctor</strong>
-            <span>Medical Staff</span>
-          </div>
-        </div>
       </div>
     </aside>
   );
@@ -82,6 +97,12 @@ export default function Layout() {
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+
+  // Start loading the AI model server-side while the user is on the
+  // dashboard, so their first X-ray analysis doesn't wait for it.
+  useEffect(() => {
+    warmUpModel().catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -105,9 +126,9 @@ export default function Layout() {
           aria-expanded={menuOpen}
           aria-controls="app-sidebar"
         >
-          ☰
+          <Icon name="menu" size={22} />
         </button>
-        <div className="brand-icon">M</div>
+        <BrandMark size={32} />
         <strong>MediVision</strong>
       </header>
 
@@ -126,6 +147,22 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+
+      {/* Thumb-reach navigation, phones only (hidden by CSS elsewhere). */}
+      <nav className="bottom-nav" aria-label="Primary">
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            aria-label={item.label}
+            className={({ isActive }) => `bottom-nav-item ${isActive ? "active" : ""}`}
+          >
+            <Icon name={item.icon} size={22} />
+            <span aria-hidden="true">{item.short}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   );
 }

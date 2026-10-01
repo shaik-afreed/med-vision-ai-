@@ -1,22 +1,6 @@
-:root {
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-}
-
+/* Global base styles live in App.css (design tokens + base). Kept minimal here. */
 html,
 body,
 #root {
   min-height: 100%;
-}
-
-body {
-  margin: 0;
 }
