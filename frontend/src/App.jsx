@@ -7,6 +7,7 @@ import Patients from "./pages/Patients";
 import XRayAnalysis from "./pages/XRayAnalysis";
 import MedicalReports from "./pages/MedicalReports";
 import DocumentAnalysis from "./pages/DocumentAnalysis";
+import AiDoctor from "./pages/AiDoctor";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
@@ -28,6 +29,7 @@ function App() {
           <Route path="/xray" element={<XRayAnalysis />} />
           <Route path="/documents" element={<DocumentAnalysis />} />
           <Route path="/reports" element={<MedicalReports />} />
+          <Route path="/ai-doctor" element={<AiDoctor />} />
         </Route>
       </Route>
 

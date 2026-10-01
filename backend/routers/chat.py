@@ -7,7 +7,7 @@ from dependencies.auth import get_current_user
 from models.document import MedicalDocument
 from models.report import Report
 from models.user import User
-from schemas.chat import ChatRequest, ChatResponse, ChatStatusResponse
+from schemas.chat import ChatRequest, ChatResponse, ChatStatusResponse, HealthChatRequest
 from services import chatbot
 
 
@@ -89,3 +89,13 @@ def chat(
     messages = [message.model_dump() for message in payload.messages]
 
     return chatbot.ask(messages, report_context, document_context)
+
+
+# The AI Doctor: general guidance for everyday health concerns. No patient
+# record or report is involved, so nothing about a patient is ever sent.
+@router.post("/health", response_model=ChatResponse)
+def health_chat(
+    payload: HealthChatRequest,
+    current_user: User = Depends(get_current_user),
+):
+    return chatbot.ask_health([message.model_dump() for message in payload.messages])

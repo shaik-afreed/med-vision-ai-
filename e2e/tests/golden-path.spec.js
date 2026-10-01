@@ -97,6 +97,27 @@ test.describe("MediVision AI - golden path", () => {
     await expect(page).toHaveURL("/login");
   });
 
+  test("AI Doctor answers an emergency message with the fixed urgent-care guidance", async ({ page }) => {
+    const email = uniqueEmail();
+
+    await page.goto("/login");
+    await page.getByText("Create an account").click();
+    await page.getByPlaceholder("Dr. Jane Smith").fill("Dr Doctor Test");
+    await page.getByPlaceholder("Enter your email").fill(email);
+    await page.getByPlaceholder("Enter your password").fill("e2e-test-password-123");
+    await page.getByRole("button", { name: "Create Account" }).click();
+    await expect(page).toHaveURL("/", { timeout: 20_000 });
+
+    await page.getByRole("link", { name: "Ask AI Doctor" }).click();
+    await expect(page).toHaveURL("/ai-doctor");
+    await expect(page.getByText(/not a diagnosis/i).first()).toBeVisible();
+
+    // Emergency wording never goes to an AI model: the answer is fixed.
+    await page.getByLabel("Your health question").fill("I have chest pain and my arm is numb");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByText(/get urgent medical care now/i)).toBeVisible({ timeout: 30_000 });
+  });
+
   test("unauthenticated visitors are redirected to /login", async ({ page }) => {
     await page.goto("/reports");
     await expect(page).toHaveURL("/login");

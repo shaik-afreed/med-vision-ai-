@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: "/xray", label: "X-Ray Analysis", short: "X-Ray", icon: "scan" },
   { to: "/documents", label: "Report Analysis", short: "Lab", icon: "fileText" },
   { to: "/reports", label: "Medical Reports", short: "Reports", icon: "folder" },
+  { to: "/ai-doctor", label: "AI Doctor", short: "Doctor", icon: "stethoscope" },
 ];
 
 function BrandMark({ size = 40 }) {

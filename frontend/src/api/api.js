@@ -247,6 +247,13 @@ export async function sendChatMessage({ reportId = null, documentId = null }, me
   return response.data;
 }
 
+// AI Doctor: general guidance for everyday health concerns. A plain
+// conversation; no patient record or report is attached.
+export async function sendHealthMessage(messages) {
+  const response = await api.post("/chat/health", { messages });
+  return response.data;
+}
+
 // ========================================
 // MODEL INFO
 // ========================================

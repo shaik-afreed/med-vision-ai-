@@ -130,6 +130,9 @@ function Dashboard() {
             <Link to="/documents" className="hero-button hero-button-ghost">
               <Icon name="fileText" size={18} /> Analyze lab report
             </Link>
+            <Link to="/ai-doctor" className="hero-button hero-button-ghost">
+              <Icon name="stethoscope" size={18} /> Ask AI Doctor
+            </Link>
           </div>
         </div>
 

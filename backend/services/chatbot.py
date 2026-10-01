@@ -680,11 +680,16 @@ def ask(messages: list[dict], report_context: dict | None, document_context: dic
         "model": None,
     }
 
+    return _answer_with_models(
+        messages, _system_prompt(report_context, facts, document_context), builtin
+    )
+
+
+def _answer_with_models(messages: list[dict], system_prompt: str, builtin: dict) -> dict:
+    """The hosted model, then a local model, then the built-in answer."""
     recent = messages[-LLM_HISTORY_MESSAGES:]
     if recent[0]["role"] != "user":
         recent = recent[1:]
-
-    system_prompt = _system_prompt(report_context, facts, document_context)
 
     if nvidia_configured() and not _nvidia_recently_down():
         try:
@@ -704,3 +709,18 @@ def ask(messages: list[dict], report_context: dict | None, document_context: dic
         logger.info("Chatbot: using built-in answers (%s)", e)
         _mark_llm_down()
         return builtin
+
+
+def ask_health(messages: list[dict]) -> dict:
+    """The AI Doctor: general guidance for everyday health concerns. Same
+    shape as ask(). Emergencies and crises always get the fixed answer."""
+    from services import health_assistant
+
+    question = messages[-1]["content"]
+
+    fixed = health_assistant.emergency_reply(question)
+    if fixed is not None:
+        return {"reply": fixed, "source": "builtin", "model": None}
+
+    builtin = {"reply": health_assistant.builtin_reply(question), "source": "builtin", "model": None}
+    return _answer_with_models(messages, health_assistant.SYSTEM_PROMPT, builtin)
