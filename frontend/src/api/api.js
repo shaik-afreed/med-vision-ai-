@@ -152,6 +152,16 @@ export async function getReportGradcamUrl(reportId) {
   return URL.createObjectURL(response.data);
 }
 
+export async function downloadReportPdf(reportId, fileName) {
+  const response = await api.get(`/reports/${reportId}/pdf`, { responseType: "blob" });
+  const url = URL.createObjectURL(response.data);
+  const link = window.document.createElement("a");
+  link.href = url;
+  link.download = fileName || `MediVision-report-${reportId}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function updateReport(reportId, payload) {
   const response = await api.patch(`/reports/${reportId}`, payload);
   return response.data;

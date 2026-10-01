@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatPercent } from "../utils/format";
-import { getReportGradcamUrl } from "../api/api";
+import { getReportGradcamUrl, downloadReportPdf, getErrorMessage } from "../api/api";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -25,6 +25,8 @@ function formatDate(value) {
 export default function ResultPanel({ report, patientName }) {
   const [gradcamUrl, setGradcamUrl] = useState("");
   const [gradcamError, setGradcamError] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState("");
 
   useEffect(() => {
     let objectUrl = "";
@@ -49,17 +51,42 @@ export default function ResultPanel({ report, patientName }) {
   if (!report) return null;
 
   const isPneumonia = report.prediction === "Pneumonia";
+  const assessment = report.assessment;
+  // A borderline score is not a reassuring "Normal" and must not look like one.
+  const isBorderline = assessment?.category === "inconclusive";
+  const panelTone = isBorderline ? "borderline-result" : isPneumonia ? "pneumonia-result" : "normal-result";
+
+  async function handleDownloadPdf() {
+    setPdfError("");
+    setPdfBusy(true);
+    try {
+      await downloadReportPdf(report.id, `MediVision-report-${String(report.id).padStart(6, "0")}.pdf`);
+    } catch (error) {
+      setPdfError(getErrorMessage(error, "Unable to download the report."));
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   return (
-    <div
-      className={`ai-result-panel ${
-        isPneumonia ? "pneumonia-result" : "normal-result"
-      }`}
-    >
+    <div className={`ai-result-panel ${panelTone}`}>
       <div className="ai-result-header">
         <strong>AI Screening Result</strong>
         <span className="ai-result-badge">{report.prediction || "Pending"}</span>
       </div>
+
+      {assessment && (
+        <div className="ai-assessment">
+          <strong>{assessment.label}</strong>
+          <p>{assessment.advice}</p>
+          {assessment.historical_pneumonia_share != null && (
+            <small>
+              Measured on the model's test set: {Math.round(assessment.historical_pneumonia_share * 100)}% of
+              images in this score range were truly pneumonia ({assessment.historical_images} images).
+            </small>
+          )}
+        </div>
+      )}
 
       <div className="ai-result-grid">
         <div>
@@ -135,6 +162,13 @@ export default function ResultPanel({ report, patientName }) {
           </small>
         </div>
       )}
+
+      <div className="ai-result-actions">
+        <button type="button" className="primary-button" onClick={handleDownloadPdf} disabled={pdfBusy}>
+          {pdfBusy ? "Preparing report..." : "Download report (PDF)"}
+        </button>
+        {pdfError && <span className="ai-result-pdf-error">{pdfError}</span>}
+      </div>
 
       <div className="ai-result-disclaimer">
         This is an AI-assisted screening result, not a confirmed medical

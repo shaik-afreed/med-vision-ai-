@@ -2,6 +2,15 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
+class Assessment(BaseModel):
+    category: str
+    label: str
+    advice: str
+    historical_pneumonia_share: float | None = None
+    historical_images: int | None = None
+    evaluated_on: str | None = None
+
+
 class ReportResponse(BaseModel):
     id: int
     patient_id: int
@@ -16,6 +25,7 @@ class ReportResponse(BaseModel):
     threshold_used: float | None = None
     model_version: str | None = None
     has_gradcam: bool = False
+    assessment: Assessment | None = None
     ai_explanation: str | None = None
 
     status: str

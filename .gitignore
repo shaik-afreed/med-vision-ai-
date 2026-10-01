@@ -48,3 +48,11 @@ e2e/playwright/.cache/
 .claude/scheduled_tasks.lock
 .DS_Store
 Thumbs.db
+
+# ==============================
+# Model retraining workspace (large; regenerate with ai_model/improve/*.py)
+# ==============================
+ai_model/improve/cache/
+ai_model/improve/models/
+ai_model/improve/runs/
+ai_model/improve/logs/

@@ -45,6 +45,9 @@ Pillow==11.3.0
 # text extraction from uploaded PDF lab/medical reports
 # ==============================
 pypdf==6.19.0
+# Downloadable PDF screening report (services/report_pdf.py)
+fpdf2==2.8.9
+
 # ==============================
 # Testing
 # ==============================

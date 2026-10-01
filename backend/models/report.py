@@ -56,3 +56,9 @@ class Report(Base):
     @property
     def has_gradcam(self) -> bool:
         return bool(self.gradcam_path)
+
+    @property
+    def assessment(self):
+        from services.assessment import assess
+
+        return assess(self.pneumonia_probability, self.model_version)

@@ -248,6 +248,15 @@ def _result_lines(report_context: dict) -> list[str]:
         f"Patient age: {report_context['patient_age']}",
         f"Patient gender: {report_context['patient_gender']}",
     ]
+    assessment = report_context.get("assessment")
+    if assessment:
+        lines.append(f"Assessment category shown to the user: {assessment['label']}")
+        lines.append(f"Guidance shown to the user: {assessment['advice']}")
+        if assessment.get("historical_pneumonia_share") is not None:
+            lines.append(
+                f"Measured on the model's test set: {assessment['historical_pneumonia_share'] * 100:.0f}% of "
+                f"{assessment['historical_images']} images in this score range were truly pneumonia."
+            )
     if report_context.get("ai_explanation"):
         lines.append(f"Heatmap explanation shown to the user: {report_context['ai_explanation']}")
     return lines
@@ -309,6 +318,15 @@ def _answer_result(ctx: dict | None) -> str:
     if ctx is None:
         return NO_RESULT
     threshold_pct = ctx["threshold"] * 100
+    assessment = ctx.get("assessment")
+    if assessment and assessment["category"] == "inconclusive":
+        return (
+            f"The AI's score for this X-ray ({ctx['pneumonia_probability']:.2f}% pneumonia probability) is borderline: "
+            f"it is below its {threshold_pct:.0f}% cutoff, so it was labeled {ctx['prediction']}, but scores in this range "
+            "were wrong about as often as right on the test set.\n"
+            "- Do not treat this as a reassuring result.\n"
+            "- A doctor should review the X-ray itself."
+        )
     if ctx["prediction"] == "Pneumonia":
         return (
             f"The AI flagged this X-ray as possible pneumonia. It estimated a "

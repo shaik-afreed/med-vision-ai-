@@ -159,3 +159,41 @@ def test_patch_report_notes_and_status(client, auth_headers):
     body = response.json()
     assert body["status"] == "reviewed"
     assert body["notes"] == "Follow up recommended."
+
+
+def test_report_includes_assessment(client, auth_headers):
+    patient_id = _create_patient(client, auth_headers)
+    files = {"file": ("xray.jpg", make_test_image_bytes(), "image/jpeg")}
+    data = {"patient_id": str(patient_id), "report_type": "X-Ray"}
+    report = client.post("/reports/upload", data=data, files=files, headers=auth_headers).json()["report"]
+
+    assert report["assessment"]["label"]
+    assert report["assessment"]["advice"]
+    assert report["assessment"]["category"] in {
+        "very_high", "high", "inconclusive", "probably_normal", "low", "very_low"
+    }
+
+
+def test_report_pdf_download_and_ownership(client, register_and_login):
+    headers_a, _ = register_and_login()
+    headers_b, _ = register_and_login()
+    patient_id = _create_patient(client, headers_a)
+    files = {"file": ("xray.jpg", make_test_image_bytes(), "image/jpeg")}
+    data = {"patient_id": str(patient_id), "report_type": "X-Ray"}
+    report_id = client.post("/reports/upload", data=data, files=files, headers=headers_a).json()["report"]["id"]
+
+    own = client.get(f"/reports/{report_id}/pdf", headers=headers_a)
+    assert own.status_code == 200
+    assert own.headers["content-type"] == "application/pdf"
+    assert own.content.startswith(b"%PDF")
+    assert f"MediVision-report-{report_id:06d}.pdf" in own.headers["content-disposition"]
+
+    from pypdf import PdfReader
+    import io
+    text = " ".join(page.extract_text() for page in PdfReader(io.BytesIO(own.content)).pages)
+    assert "AI-Assisted Chest X-Ray Screening Report" in text
+    assert "John Doe" in text
+    assert "Clinician review" in text.title() or "CLINICIAN REVIEW" in text.upper()
+
+    assert client.get(f"/reports/{report_id}/pdf", headers=headers_b).status_code == 404
+    assert client.get(f"/reports/{report_id}/pdf").status_code == 401

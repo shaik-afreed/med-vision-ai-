@@ -58,6 +58,7 @@ def chat(
             "threshold": report.threshold_used,
             "model_version": report.model_version,
             "ai_explanation": report.ai_explanation,
+            "assessment": report.assessment,
             "patient_age": report.patient.age,
             "patient_gender": report.patient.gender,
         }

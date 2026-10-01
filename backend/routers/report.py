@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from PIL import Image, UnidentifiedImageError
 import io
 
@@ -28,6 +28,7 @@ from schemas.report import (
 )
 from services.prediction import predict_disease
 from services.gradcam import generate_gradcam
+from services.report_pdf import build_report_pdf
 from dependencies.auth import get_current_user
 from models.user import User
 from core.config import settings
@@ -321,4 +322,26 @@ def get_report_gradcam(
         report.gradcam_path,
         media_type="image/png",
         filename=f"gradcam_{report.report_name}.png"
+    )
+
+
+# ==============================
+# GET REPORT AS PDF
+# ==============================
+
+@router.get("/{report_id}/pdf")
+def get_report_pdf(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+
+    report = _get_owned_report(report_id, current_user, db)
+
+    return Response(
+        content=build_report_pdf(report, report.patient),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="MediVision-report-{report.id:06d}.pdf"'
+        },
     )

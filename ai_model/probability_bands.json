@@ -1,0 +1,57 @@
+{
+ "model_version": "mobilenetv2-finetuned-v1",
+ "evaluated_on": "Kermany test set, 624 images (234 normal, 390 pneumonia)",
+ "decision_threshold_percent": 82,
+ "generated": "2026-10-01",
+ "caveat": "Measured on one pediatric dataset; may not hold for other populations or X-ray equipment.",
+ "bands": [
+  {
+   "category": "very_low",
+   "min_percent": 0,
+   "max_percent": 20,
+   "images": 131,
+   "truly_pneumonia": 3,
+   "pneumonia_share": 0.0229
+  },
+  {
+   "category": "low",
+   "min_percent": 20,
+   "max_percent": 50,
+   "images": 51,
+   "truly_pneumonia": 8,
+   "pneumonia_share": 0.1569
+  },
+  {
+   "category": "probably_normal",
+   "min_percent": 50,
+   "max_percent": 67,
+   "images": 36,
+   "truly_pneumonia": 9,
+   "pneumonia_share": 0.25
+  },
+  {
+   "category": "inconclusive",
+   "min_percent": 67,
+   "max_percent": 82,
+   "images": 36,
+   "truly_pneumonia": 19,
+   "pneumonia_share": 0.5278
+  },
+  {
+   "category": "high",
+   "min_percent": 82,
+   "max_percent": 95,
+   "images": 69,
+   "truly_pneumonia": 55,
+   "pneumonia_share": 0.7971
+  },
+  {
+   "category": "very_high",
+   "min_percent": 95,
+   "max_percent": 100,
+   "images": 301,
+   "truly_pneumonia": 296,
+   "pneumonia_share": 0.9834
+  }
+ ]
+}
