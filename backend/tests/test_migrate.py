@@ -21,3 +21,11 @@ def test_run_migrations_is_safe_to_repeat(tmp_path, monkeypatch):
 
     run_migrations()
     run_migrations()
+
+
+def test_postgres_url_scheme_is_normalized_for_sqlalchemy():
+    from core.config import Settings
+
+    settings = Settings(DATABASE_URL="postgres://user:pw@host:5432/db")
+    assert settings.DATABASE_URL == "postgresql://user:pw@host:5432/db"
+    assert Settings(DATABASE_URL="sqlite:///./x.db").DATABASE_URL == "sqlite:///./x.db"

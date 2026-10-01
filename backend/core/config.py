@@ -84,6 +84,14 @@ class Settings(BaseSettings):
     LOCAL_LLM_URL: str = "http://127.0.0.1:11434"
     LOCAL_LLM_MODEL: str = "qwen2.5:7b"
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def normalize_postgres_scheme(cls, value):
+        # Some hosts hand out "postgres://", which SQLAlchemy 2 rejects.
+        if isinstance(value, str) and value.startswith("postgres://"):
+            return "postgresql://" + value[len("postgres://"):]
+        return value
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value):

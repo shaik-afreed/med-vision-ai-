@@ -89,6 +89,14 @@ function Login() {
       // Any HTTP answer (even a 401) proves the server is up, so drop a stale
       // "can't reach the server" notice.
       if (error?.response) setServerState("ready");
+
+      if (mode === "login" && error?.response?.status === 401) {
+        setError(
+          "Email or password not recognised. If you signed up earlier, your account may have been removed when the demo server was reset - please create it again."
+        );
+        return;
+      }
+
       setError(
         getErrorMessage(
           error,

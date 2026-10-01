@@ -29,7 +29,9 @@ if config.config_file_name is not None:
     # server at startup, the default (True) would silence uvicorn's loggers.
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# "%" is an interpolation character in the ini-style config; a database
+# password may contain it.
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 target_metadata = Base.metadata
 
