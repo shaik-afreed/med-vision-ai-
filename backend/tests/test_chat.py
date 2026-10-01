@@ -3,6 +3,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
+from pydantic import SecretStr
 
 from core.config import settings
 from services import chatbot
@@ -12,6 +13,8 @@ from tests.conftest import make_test_image_bytes
 # replaces them, so the HTTP client code itself can be tested.
 REAL_CALL_LOCAL_LLM = chatbot._call_local_llm
 REAL_LOCAL_LLM_STATUS = chatbot.local_llm_status
+
+FAKE_KEY = "nvapi-test-fake-key-for-unit-tests"
 
 PATIENT_PAYLOAD = {
     "full_name": "Distinctive Patientname",
@@ -47,12 +50,21 @@ def test_chat_requires_auth(client):
     assert client.get("/chat/status").status_code == 401
 
 
-def test_status_reports_local_llm_offline(client, auth_headers):
+def test_status_reports_no_llm_when_nothing_is_available(client, auth_headers):
     response = client.get("/chat/status", headers=auth_headers)
     assert response.status_code == 200
-    body = response.json()
-    assert body["llm_available"] is False
-    assert body["model"] == settings.LOCAL_LLM_MODEL
+    assert response.json() == {"llm_available": False, "provider": "none", "model": None}
+
+
+def test_status_reports_nvidia_when_key_is_configured(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(settings, "NVIDIA_API_KEY", SecretStr(FAKE_KEY))
+    response = client.get("/chat/status", headers=auth_headers)
+    assert response.json() == {
+        "llm_available": True,
+        "provider": "nvidia",
+        "model": settings.NVIDIA_MODEL,
+    }
+    assert FAKE_KEY not in response.text
 
 
 def test_chat_rejects_malformed_conversation(client, auth_headers):
@@ -283,3 +295,143 @@ def test_http_client_reports_missing_model_with_pull_hint(fake_ollama, monkeypat
         REAL_CALL_LOCAL_LLM("rules", [{"role": "user", "content": "hi"}])
 
     assert REAL_LOCAL_LLM_STATUS() == {"running": True, "model_ready": False}
+
+
+# ------------------------------------------------------------
+# NVIDIA-hosted model path (against a fake OpenAI-compatible server)
+# ------------------------------------------------------------
+
+class FakeNvidia(BaseHTTPRequestHandler):
+    mode = "ok"
+    received = []
+
+    def log_message(self, *_args):
+        pass
+
+    def do_POST(self):
+        length = int(self.headers["Content-Length"])
+        FakeNvidia.received.append({
+            "path": self.path,
+            "auth": self.headers.get("Authorization"),
+            "body": json.loads(self.rfile.read(length)),
+        })
+
+        def send(code, body):
+            data = json.dumps(body).encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        if FakeNvidia.mode == "http_error":
+            send(404, {"detail": "Function not found for account"})
+        elif FakeNvidia.mode == "empty_content":
+            send(200, {"choices": [{"finish_reason": "length", "message": {"content": None, "reasoning_content": "thinking..."}}]})
+        elif FakeNvidia.mode == "truncated":
+            send(200, {"choices": [{"finish_reason": "length", "message": {"content": "Partial answer"}}]})
+        else:
+            send(200, {"choices": [{"finish_reason": "stop", "message": {"content": "Hello from the fake NVIDIA model."}}]})
+
+
+@pytest.fixture
+def fake_nvidia(monkeypatch):
+    server = HTTPServer(("127.0.0.1", 0), FakeNvidia)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    FakeNvidia.mode = "ok"
+    FakeNvidia.received = []
+    monkeypatch.setattr(settings, "NVIDIA_BASE_URL", f"http://127.0.0.1:{server.server_port}/v1")
+    monkeypatch.setattr(settings, "NVIDIA_API_KEY", SecretStr(FAKE_KEY))
+    yield FakeNvidia
+    server.shutdown()
+    server.server_close()
+
+
+def test_nvidia_answer_is_used_and_key_goes_only_in_auth_header(client, auth_headers, fake_nvidia):
+    report = _upload_report(client, auth_headers)
+
+    response = client.post("/chat", json=_question(report_id=report["id"]), headers=auth_headers)
+
+    assert response.json() == {
+        "reply": "Hello from the fake NVIDIA model.",
+        "source": "nvidia",
+        "model": settings.NVIDIA_MODEL,
+    }
+    assert FAKE_KEY not in response.text
+
+    sent = fake_nvidia.received[0]
+    assert sent["path"] == "/v1/chat/completions"
+    assert sent["auth"] == f"Bearer {FAKE_KEY}"
+    assert sent["body"]["model"] == settings.NVIDIA_MODEL
+    assert sent["body"]["messages"][0]["role"] == "system"
+    assert sent["body"]["messages"][-1] == {"role": "user", "content": "What does this result mean?"}
+
+    prompt = sent["body"]["messages"][0]["content"]
+    assert f"Prediction: {report['prediction']}" in prompt
+    assert "Distinctive Patientname" not in prompt
+    assert "5550001111" not in prompt
+    assert FAKE_KEY not in prompt
+
+
+def test_nvidia_http_error_falls_back_to_builtin_without_leaking_anything(client, auth_headers, fake_nvidia):
+    fake_nvidia.mode = "http_error"
+
+    response = client.post("/chat", json=_question("What is pneumonia?"), headers=auth_headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source"] == "builtin"
+    assert FAKE_KEY not in response.text
+    assert "Function not found" not in response.text
+
+
+def test_nvidia_answer_that_is_only_thinking_falls_back(client, auth_headers, fake_nvidia):
+    fake_nvidia.mode = "empty_content"
+
+    response = client.post("/chat", json=_question("What is pneumonia?"), headers=auth_headers)
+
+    assert response.json()["source"] == "builtin"
+
+
+def test_nvidia_truncated_answer_is_flagged(client, auth_headers, fake_nvidia):
+    fake_nvidia.mode = "truncated"
+
+    reply = client.post("/chat", json=_question("What is pneumonia?"), headers=auth_headers).json()["reply"]
+
+    assert reply.startswith("Partial answer")
+    assert "cut short" in reply
+
+
+def test_nvidia_failure_is_skipped_until_retry_window_passes(client, auth_headers, fake_nvidia, monkeypatch):
+    fake_nvidia.mode = "http_error"
+
+    for _ in range(3):
+        client.post("/chat", json=_question("What is pneumonia?"), headers=auth_headers)
+
+    assert len(fake_nvidia.received) == 1
+
+    monkeypatch.setattr(chatbot, "_nvidia_down_until", 0.0)
+    fake_nvidia.mode = "ok"
+    response = client.post("/chat", json=_question("What is pneumonia?"), headers=auth_headers)
+    assert response.json()["source"] == "nvidia"
+
+
+def test_emergency_question_never_goes_to_nvidia(client, auth_headers, fake_nvidia):
+    response = client.post(
+        "/chat", json=_question("My child has chest pain and can't breathe"), headers=auth_headers
+    )
+
+    assert response.json()["source"] == "builtin"
+    assert "urgent medical care" in response.json()["reply"]
+    assert fake_nvidia.received == []
+
+
+def test_plain_text_strips_markdown_and_odd_spaces():
+    raw = "## Summary\n\nThis is **very** important.\n\n* first point\n* second point\n\nUse `care`.\n\n\n\nEnd‑to‑end."
+    cleaned = chatbot.plain_text(raw)
+
+    assert "**" not in cleaned and "#" not in cleaned and "`" not in cleaned
+    assert "very important" in cleaned
+    assert "- first point" in cleaned and "- second point" in cleaned
+    assert "End-to-end." in cleaned
+    assert "\n\n\n" not in cleaned

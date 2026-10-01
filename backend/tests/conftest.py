@@ -70,6 +70,11 @@ def local_llm_offline(monkeypatch):
     def offline(*_args, **_kwargs):
         raise chatbot.LocalLLMUnavailable("disabled in tests")
 
+    # backend/.env holds the developer's real NVIDIA key; tests must never
+    # read it or make real (billable) calls. NVIDIA tests install a fake
+    # key and a local fake server explicitly.
+    monkeypatch.setattr(settings, "NVIDIA_API_KEY", None)
+    monkeypatch.setattr(chatbot, "_nvidia_down_until", 0.0)
     monkeypatch.setattr(chatbot, "_llm_down_until", 0.0)
     monkeypatch.setattr(chatbot, "_call_local_llm", offline)
     monkeypatch.setattr(

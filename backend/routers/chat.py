@@ -18,12 +18,15 @@ router = APIRouter(
 
 @router.get("/status", response_model=ChatStatusResponse)
 def chat_status(current_user: User = Depends(get_current_user)):
-    status = chatbot.local_llm_status()
-    return {
-        "llm_running": status["running"],
-        "llm_available": status["model_ready"],
-        "model": settings.LOCAL_LLM_MODEL,
-    }
+    # No network call for the hosted model: it is "available" if a key is
+    # configured; a failure on an actual question falls back automatically.
+    if chatbot.nvidia_configured():
+        return {"llm_available": True, "provider": "nvidia", "model": settings.NVIDIA_MODEL}
+
+    if chatbot.local_llm_status()["model_ready"]:
+        return {"llm_available": True, "provider": "local_llm", "model": settings.LOCAL_LLM_MODEL}
+
+    return {"llm_available": False, "provider": "none", "model": None}
 
 
 # Plain `def` (not async): FastAPI runs it in a worker thread, so the

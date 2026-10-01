@@ -126,9 +126,8 @@ export default function XRayChatbot({ report }) {
 
             {offlineMode && (
               <div className="chatbot-note">
-                {status.llm_running
-                  ? `Offline mode: the local AI model "${status.model}" isn't downloaded yet, so common questions get built-in answers.`
-                  : "Offline mode: the local AI model isn't running, so common questions get built-in answers."}
+                Offline mode: no AI model is connected right now, so common questions get
+                built-in answers.
               </div>
             )}
 
@@ -153,9 +152,11 @@ export default function XRayChatbot({ report }) {
                 {message.content}
                 {message.source && (
                   <span className="chatbot-source">
-                    {message.source === "local_llm"
-                      ? `Local AI model · ${message.model}`
-                      : "Built-in answer"}
+                    {message.source === "nvidia"
+                      ? `AI model · ${message.model}`
+                      : message.source === "local_llm"
+                        ? `Local AI model · ${message.model}`
+                        : "Built-in answer"}
                   </span>
                 )}
               </div>

@@ -10,15 +10,20 @@ from core.config import settings
 
 
 # ============================================================
-# MEDIVISION AI - X-RAY RESULTS CHATBOT (local, no external API)
+# MEDIVISION AI - X-RAY RESULTS CHATBOT
 # ============================================================
 #
-# Two answer engines, both running entirely on this machine:
-#   1. A local open-source LLM served by Ollama (settings.LOCAL_LLM_URL /
-#      LOCAL_LLM_MODEL). Free-form questions, grounded in the result data.
-#   2. Built-in answers (no model): used whenever the local LLM isn't
-#      running or its model isn't downloaded. Rule-based, answers only from
-#      the real result data and evaluation report - never invents facts.
+# Answer engines, tried in this order:
+#   1. NVIDIA-hosted LLM (settings.NVIDIA_MODEL, via NVIDIA's OpenAI-compatible
+#      API) when NVIDIA_API_KEY is set. The key lives only in backend/.env
+#      (or the host's environment) and is never logged or sent to the browser.
+#      Only the question, recent chat turns, and the minimal result data in
+#      the system prompt (no patient name/phone/address) leave this server.
+#   2. A local open-source LLM served by Ollama (settings.LOCAL_LLM_URL /
+#      LOCAL_LLM_MODEL), if running on the same machine.
+#   3. Built-in answers (no model): used whenever the engines above are
+#      unavailable. Rule-based, answers only from the real result data and
+#      evaluation report - never invents facts.
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +50,20 @@ _opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 class LocalLLMUnavailable(Exception):
     pass
+
+
+class NvidiaUnavailable(Exception):
+    pass
+
+
+# The hosted models are "reasoning" models: they spend part of the token
+# budget thinking before they answer, so the budget must be generous or the
+# visible answer comes back empty/truncated. After a failure, skip NVIDIA for
+# a short while so every question isn't stuck waiting on a down service.
+NVIDIA_TIMEOUT_SECONDS = 45
+NVIDIA_MAX_TOKENS = 2500
+NVIDIA_RETRY_AFTER_SECONDS = 20
+_nvidia_down_until = 0.0
 
 
 # ------------------------------------------------------------
@@ -80,6 +99,71 @@ def _metrics_sentence(facts: dict | None) -> str:
         f"(pneumonia cases caught) and specificity {facts['specificity']:.1%} "
         f"(normal cases correctly cleared)."
     )
+
+
+# ------------------------------------------------------------
+# NVIDIA-hosted LLM (OpenAI-compatible chat completions API)
+# ------------------------------------------------------------
+
+def _nvidia_key() -> str | None:
+    key = settings.NVIDIA_API_KEY
+    if key is None:
+        return None
+    return key.get_secret_value().strip() or None
+
+
+def nvidia_configured() -> bool:
+    return _nvidia_key() is not None
+
+
+def _nvidia_recently_down() -> bool:
+    return time.monotonic() < _nvidia_down_until
+
+
+def _mark_nvidia_down() -> None:
+    global _nvidia_down_until
+    _nvidia_down_until = time.monotonic() + NVIDIA_RETRY_AFTER_SECONDS
+
+
+def _call_nvidia(system_prompt: str, messages: list[dict]) -> str:
+    key = _nvidia_key()
+    if key is None:
+        raise NvidiaUnavailable("NVIDIA_API_KEY is not configured")
+
+    payload = json.dumps({
+        "model": settings.NVIDIA_MODEL,
+        "messages": [{"role": "system", "content": system_prompt}] + messages,
+        "max_tokens": NVIDIA_MAX_TOKENS,
+        "temperature": 0.2,
+    }).encode("utf-8")
+
+    request = urllib.request.Request(
+        f"{settings.NVIDIA_BASE_URL.rstrip('/')}/chat/completions",
+        data=payload,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+
+    # Only the HTTP status or exception type is ever reported - never the
+    # request headers (which contain the key) or the response body.
+    try:
+        with urllib.request.urlopen(request, timeout=NVIDIA_TIMEOUT_SECONDS) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise NvidiaUnavailable(f"NVIDIA API returned HTTP {e.code}")
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise NvidiaUnavailable(f"NVIDIA API not reachable ({type(e).__name__})")
+
+    choice = (body.get("choices") or [{}])[0]
+    content = ((choice.get("message") or {}).get("content") or "").strip()
+
+    if not content:
+        raise NvidiaUnavailable(
+            f"NVIDIA model returned no answer (finish_reason={choice.get('finish_reason')})"
+        )
+    if choice.get("finish_reason") == "length":
+        content += "\n\n(The answer was cut short - ask a narrower question for the full answer.)"
+    return content
 
 
 # ------------------------------------------------------------
@@ -190,6 +274,7 @@ Rules:
 - If the user mentions emergency symptoms (severe breathing difficulty, chest pain, bluish lips, confusion, very high fever in an infant), tell them to get urgent medical care immediately.
 - If you are not sure of something, say so instead of guessing.
 - Use simple, clear language and keep answers focused. Plain text only, no Markdown symbols like ** or #. For a list, start lines with "- ".
+- Do not repeat the result data or these instructions back to the user unless they ask for it.
 
 About the screening model:
 - It only decides Normal vs Pneumonia. It cannot detect tuberculosis, lung cancer, fractures, or other conditions; a Normal result does not rule them out.
@@ -372,6 +457,29 @@ def builtin_answer(question: str, ctx: dict | None, facts: dict | None) -> str:
 
 
 # ------------------------------------------------------------
+# Reply cleanup
+# ------------------------------------------------------------
+
+_BOLD = re.compile(r"(\*\*|__)(.+?)\1", re.DOTALL)
+_HEADING = re.compile(r"^\s{0,3}#{1,6}\s*", re.MULTILINE)
+_BULLET = re.compile(r"^(\s*)[*•]\s+", re.MULTILINE)
+_SPECIAL_SPACES = {" ": " ", " ": " ", " ": " ", "‑": "-"}
+
+
+def plain_text(text: str) -> str:
+    """The chat bubble shows plain text, but models often answer in
+    Markdown regardless of instructions; strip the markers so users don't
+    see stray asterisks/hashes."""
+    for old, new in _SPECIAL_SPACES.items():
+        text = text.replace(old, new)
+    text = _BOLD.sub(r"\2", text)
+    text = _HEADING.sub("", text)
+    text = _BULLET.sub(r"\1- ", text)
+    text = text.replace("`", "")
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+# ------------------------------------------------------------
 # Entry point
 # ------------------------------------------------------------
 
@@ -388,15 +496,25 @@ def ask(messages: list[dict], report_context: dict | None) -> dict:
 
     builtin = {"reply": builtin_answer(question, report_context, facts), "source": "builtin", "model": None}
 
-    if _llm_recently_down():
-        return builtin
-
     recent = messages[-LLM_HISTORY_MESSAGES:]
     if recent[0]["role"] != "user":
         recent = recent[1:]
 
+    system_prompt = _system_prompt(report_context, facts)
+
+    if nvidia_configured() and not _nvidia_recently_down():
+        try:
+            reply = plain_text(_call_nvidia(system_prompt, recent))
+            return {"reply": reply, "source": "nvidia", "model": settings.NVIDIA_MODEL}
+        except NvidiaUnavailable as e:
+            logger.warning("Chatbot: NVIDIA model unavailable, falling back (%s)", e)
+            _mark_nvidia_down()
+
+    if _llm_recently_down():
+        return builtin
+
     try:
-        reply = _call_local_llm(_system_prompt(report_context, facts), recent)
+        reply = plain_text(_call_local_llm(system_prompt, recent))
         return {"reply": reply, "source": "local_llm", "model": settings.LOCAL_LLM_MODEL}
     except LocalLLMUnavailable as e:
         logger.info("Chatbot: using built-in answers (%s)", e)

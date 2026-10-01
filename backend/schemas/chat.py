@@ -27,11 +27,13 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
-    source: Literal["local_llm", "builtin"]
+    source: Literal["nvidia", "local_llm", "builtin"]
     model: str | None = None
 
 
 class ChatStatusResponse(BaseModel):
-    llm_running: bool
+    # True when any AI model (hosted or local) can answer free-form questions.
     llm_available: bool
-    model: str
+    # Which engine answers first: "nvidia", "local_llm", or "none" (built-in answers only).
+    provider: Literal["nvidia", "local_llm", "none"]
+    model: str | None = None

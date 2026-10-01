@@ -3,7 +3,7 @@ import secrets
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import field_validator, model_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -69,10 +69,18 @@ class Settings(BaseSettings):
     MODEL_VERSION: str = "mobilenetv2-finetuned-v1"
 
     # ==============================
-    # CHATBOT (local open-source LLM via Ollama - no external API, no key)
+    # CHATBOT
     # ==============================
-    # Declared here so they can be overridden from .env (extra="ignore"
-    # drops any .env variable that isn't declared as a field).
+    # Declared here so they can be set from .env (extra="ignore" drops any
+    # .env variable that isn't declared as a field).
+    #
+    # NVIDIA-hosted LLM (preferred when a key is set). SecretStr keeps the
+    # key masked in reprs/logs; it is only ever read in services/chatbot.py.
+    NVIDIA_API_KEY: SecretStr | None = None
+    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    NVIDIA_MODEL: str = "openai/gpt-oss-20b"
+
+    # Local open-source LLM via Ollama - optional fallback on the same machine.
     LOCAL_LLM_URL: str = "http://127.0.0.1:11434"
     LOCAL_LLM_MODEL: str = "qwen2.5:7b"
 
