@@ -97,7 +97,7 @@ function MedicalReports() {
   }
 
   function toneOf(report) {
-    if (report.assessment?.category === "inconclusive") return "borderline";
+    if (["inconclusive", "outside_training_ages"].includes(report.assessment?.category)) return "borderline";
     const prediction = report.prediction?.toLowerCase();
     return prediction === "pneumonia" ? "pneumonia" : prediction === "normal" ? "normal" : "pending";
   }
@@ -167,7 +167,11 @@ function MedicalReports() {
                   </div>
 
                   <div className={`report-result ${tone}`}>
-                    <strong>{tone === "borderline" ? "Inconclusive" : report.prediction || "Pending"}</strong>
+                    <strong>{report.assessment?.category === "outside_training_ages"
+                          ? "Unreliable for age"
+                          : tone === "borderline"
+                            ? "Inconclusive"
+                            : report.prediction || "Pending"}</strong>
                     {report.confidence != null ? (
                       <span>Confidence: {formatPercent(report.confidence)}%</span>
                     ) : (

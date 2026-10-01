@@ -40,7 +40,8 @@ test.describe("MediVision AI - golden path", () => {
 
     await page.getByRole("button", { name: "+ Add Patient" }).click();
     await page.getByPlaceholder("Enter full name").fill("E2E Test Patient");
-    await page.getByPlaceholder("Enter age").fill("50");
+    // The model is meant for young children; adults get an "unreliable" notice instead.
+    await page.getByPlaceholder("Enter age").fill("4");
     await page.getByLabel("Gender").selectOption("Male");
     await page.getByPlaceholder("Enter phone number").fill("5559990000");
     await page.getByPlaceholder("Enter address").fill("1 Test Way");

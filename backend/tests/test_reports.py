@@ -170,8 +170,31 @@ def test_report_includes_assessment(client, auth_headers):
     assert report["assessment"]["label"]
     assert report["assessment"]["advice"]
     assert report["assessment"]["category"] in {
-        "very_high", "high", "inconclusive", "probably_normal", "low", "very_low"
+        "very_high", "high", "inconclusive", "probably_normal", "low", "very_low",
+        "outside_training_ages",
     }
+
+
+def test_adult_patient_report_is_marked_unreliable_and_child_report_is_not(client, auth_headers):
+    files = {"file": ("xray.jpg", make_test_image_bytes(), "image/jpeg")}
+    categories = {}
+    for age in (4, 45):
+        patient_id = client.post(
+            "/patients/",
+            json={"full_name": f"Age {age}", "age": age, "gender": "Female", "phone": "1", "address": "x", "disease": None},
+            headers=auth_headers,
+        ).json()["patient"]["id"]
+        report = client.post(
+            "/reports/upload", data={"patient_id": str(patient_id), "report_type": "X-Ray"},
+            files=files, headers=auth_headers,
+        ).json()["report"]
+        categories[age] = report["assessment"]["category"]
+
+    assert categories[45] == "outside_training_ages"
+    assert categories[4] != "outside_training_ages"
+
+    pdf = client.get(f"/reports/{report['id']}/pdf", headers=auth_headers)
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
 
 
 def test_report_pdf_download_and_ownership(client, register_and_login):

@@ -36,3 +36,24 @@ def test_historical_figures_are_withheld_for_a_different_model_version():
 
 def test_no_probability_gives_no_assessment():
     assert assess(None, V1) is None
+
+
+@pytest.mark.parametrize("age", [11, 30, 45, 80])
+def test_patients_older_than_the_training_ages_get_no_likelihood_label(age):
+    result = assess(99.35, V1, patient_age=age)
+    assert result["category"] == "outside_training_ages"
+    assert "trained only on X-rays of young children" in result["label"]
+    assert result["historical_pneumonia_share"] is None
+    assert result["score_category"] == "very_high"
+
+
+@pytest.mark.parametrize("age", [0, 1, 5, 10])
+def test_children_within_the_training_ages_keep_the_measured_bands(age):
+    result = assess(99.35, V1, patient_age=age)
+    assert result["category"] == "very_high"
+    assert result["score_category"] == "very_high"
+    assert result["historical_images"] is not None
+
+
+def test_unknown_age_keeps_the_measured_bands():
+    assert assess(99.35, V1)["category"] == "very_high"

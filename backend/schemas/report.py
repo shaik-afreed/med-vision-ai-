@@ -9,6 +9,8 @@ class Assessment(BaseModel):
     historical_pneumonia_share: float | None = None
     historical_images: int | None = None
     evaluated_on: str | None = None
+    # The score's own band, even when `category` overrides it (e.g. adult patient).
+    score_category: str | None = None
 
 
 class ReportResponse(BaseModel):

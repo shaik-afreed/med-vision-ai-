@@ -61,4 +61,5 @@ class Report(Base):
     def assessment(self):
         from services.assessment import assess
 
-        return assess(self.pneumonia_probability, self.model_version)
+        age = self.patient.age if self.patient is not None else None
+        return assess(self.pneumonia_probability, self.model_version, age)

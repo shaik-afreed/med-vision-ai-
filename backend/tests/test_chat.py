@@ -531,3 +531,15 @@ def test_llm_gets_document_values_but_no_report_text_or_identifiers(client, auth
     assert "Evergreen" not in system_prompt
     assert "Jane Roe" not in system_prompt
     assert "COMPLETE BLOOD COUNT REPORT" not in system_prompt
+
+
+def test_builtin_answer_for_an_adult_patient_says_the_score_is_unreliable(client, auth_headers):
+    report = _upload_report(client, auth_headers)  # PATIENT_PAYLOAD age 45
+    assert report["assessment"]["category"] == "outside_training_ages"
+
+    reply = client.post(
+        "/chat", json=_question(report_id=report["id"]), headers=auth_headers
+    ).json()["reply"]
+
+    assert "should not be used" in reply
+    assert "children aged 1 to 5" in reply

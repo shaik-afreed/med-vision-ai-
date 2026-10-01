@@ -10,7 +10,15 @@ from functools import lru_cache
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BANDS_PATH = os.path.join(REPO_ROOT, "ai_model", "probability_bands.json")
 
+# The deployed model was trained only on chest X-rays of children aged 1-5
+# (one pediatric hospital). On adult X-rays it is often confidently wrong, so
+# above this age the score is not given a likelihood label at all.
+TRAINING_AGE_MAX = 10
+
+OUTSIDE_AGES = "outside_training_ages"
+
 LABELS = {
+    OUTSIDE_AGES: "Unreliable for this patient's age - the AI was trained only on X-rays of young children",
     "very_high": "Very high likelihood of pneumonia",
     "high": "High likelihood of pneumonia",
     "inconclusive": "Inconclusive (borderline) - cannot be reliably called normal or pneumonia",
@@ -20,6 +28,11 @@ LABELS = {
 }
 
 ADVICE = {
+    OUTSIDE_AGES: (
+        "This AI model learned from X-rays of children aged 1-5 and often gives confident but wrong "
+        "scores on adult or older-child X-rays, so this score should not be used. A qualified "
+        "clinician must read the X-ray itself."
+    ),
     "very_high": "Recommend prompt review of the X-ray by a qualified clinician.",
     "high": "Recommend review of the X-ray by a qualified clinician.",
     "inconclusive": (
@@ -40,11 +53,17 @@ def _load_bands() -> dict | None:
         return json.load(f)
 
 
-def assess(pneumonia_probability_percent: float | None, model_version: str | None) -> dict | None:
+def assess(
+    pneumonia_probability_percent: float | None,
+    model_version: str | None,
+    patient_age: int | None = None,
+) -> dict | None:
     """Returns {"category", "label", "advice", "historical_pneumonia_share",
-    "historical_images", "evaluated_on"} or None if no probability.
-    The historical figures are included only when the saved table describes
-    the same model version that produced this probability."""
+    "historical_images", "evaluated_on", "score_category"} or None if no
+    probability. The historical figures are included only when the saved
+    table describes the same model version that produced this probability.
+    For a patient older than TRAINING_AGE_MAX the category is
+    "outside_training_ages" and score_category keeps the score's own band."""
     if pneumonia_probability_percent is None:
         return None
 
@@ -55,6 +74,17 @@ def assess(pneumonia_probability_percent: float | None, model_version: str | Non
         if band["min_percent"] <= pneumonia_probability_percent < band["max_percent"] or (
             band["max_percent"] >= 100 and pneumonia_probability_percent >= band["min_percent"]
         ):
+            if patient_age is not None and patient_age > TRAINING_AGE_MAX:
+                return {
+                    "category": OUTSIDE_AGES,
+                    "label": LABELS[OUTSIDE_AGES],
+                    "advice": ADVICE[OUTSIDE_AGES],
+                    "historical_pneumonia_share": None,
+                    "historical_images": None,
+                    "evaluated_on": None,
+                    "score_category": band["category"],
+                }
+
             same_model = data.get("model_version") == model_version
             return {
                 "category": band["category"],
@@ -63,6 +93,7 @@ def assess(pneumonia_probability_percent: float | None, model_version: str | Non
                 "historical_pneumonia_share": band["pneumonia_share"] if same_model else None,
                 "historical_images": band["images"] if same_model else None,
                 "evaluated_on": data["evaluated_on"] if same_model else None,
+                "score_category": band["category"],
             }
 
     return None

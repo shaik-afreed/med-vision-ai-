@@ -365,6 +365,14 @@ def _answer_result(ctx: dict | None) -> str:
         return NO_RESULT
     threshold_pct = ctx["threshold"] * 100
     assessment = ctx.get("assessment")
+    if assessment and assessment["category"] == "outside_training_ages":
+        return (
+            f"The AI scored this X-ray {ctx['pneumonia_probability']:.2f}% for pneumonia, but that score "
+            f"should not be used: the patient is {ctx['patient_age']}, and the model was trained only on "
+            "X-rays of children aged 1 to 5. On adult X-rays it is often confidently wrong.\n"
+            "- Treat this result as unreliable, whichever way it points.\n"
+            "- A qualified clinician must read the X-ray itself."
+        )
     if assessment and assessment["category"] == "inconclusive":
         return (
             f"The AI's score for this X-ray ({ctx['pneumonia_probability']:.2f}% pneumonia probability) is borderline: "

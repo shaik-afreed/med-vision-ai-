@@ -54,8 +54,11 @@ export default function ResultPanel({ report, patientName }) {
 
   const isPneumonia = report.prediction === "Pneumonia";
   const assessment = report.assessment;
-  // A borderline score is not a reassuring "Normal" and must not look like one.
-  const isBorderline = assessment?.category === "inconclusive";
+  // A borderline score is not a reassuring "Normal" and must not look like
+  // one; for a patient outside the model's training ages (adults) the score
+  // is unreliable whichever way it points.
+  const isOutsideAges = assessment?.category === "outside_training_ages";
+  const isBorderline = assessment?.category === "inconclusive" || isOutsideAges;
   const panelTone = isBorderline ? "borderline-result" : isPneumonia ? "pneumonia-result" : "normal-result";
   const toneIcon = isBorderline ? "alert" : isPneumonia ? "alert" : "check";
 
@@ -81,8 +84,9 @@ export default function ResultPanel({ report, patientName }) {
           <strong>AI Screening Result</strong>
         </div>
         <span className="ai-result-badge">
-          {report.prediction || "Pending"}
-          {isBorderline ? " · borderline" : ""}
+          {isOutsideAges
+            ? "Not reliable for this age"
+            : `${report.prediction || "Pending"}${isBorderline ? " · borderline" : ""}`}
         </span>
       </div>
 
@@ -147,6 +151,14 @@ export default function ResultPanel({ report, patientName }) {
       {report.ai_explanation && (
         <div className="ai-result-explanation">
           <span className="ai-result-explanation-label">What this means</span>
+          {isOutsideAges && (
+            <p>
+              <strong>
+                Because of the patient's age, the text below only describes what the model did; it
+                is not a usable result.
+              </strong>
+            </p>
+          )}
           <p>{report.ai_explanation}</p>
         </div>
       )}
