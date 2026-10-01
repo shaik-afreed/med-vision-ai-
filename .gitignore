@@ -56,3 +56,6 @@ ai_model/improve/cache/
 ai_model/improve/models/
 ai_model/improve/runs/
 ai_model/improve/logs/
+
+# External test data (large; regenerate with ai_model/external/nih_eval.py extract)
+ai_model/external/cache/
