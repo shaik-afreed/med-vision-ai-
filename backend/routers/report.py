@@ -28,7 +28,6 @@ from schemas.report import (
 )
 from services.prediction import predict_disease
 from services.gradcam import generate_gradcam
-from services.report_pdf import build_report_pdf
 from dependencies.auth import get_current_user
 from models.user import User
 from core.config import settings
@@ -337,6 +336,9 @@ def get_report_pdf(
 ):
 
     report = _get_owned_report(report_id, current_user, db)
+
+    # Imported here: the PDF library is slow to import and rarely needed.
+    from services.report_pdf import build_report_pdf
 
     return Response(
         content=build_report_pdf(report, report.patient),

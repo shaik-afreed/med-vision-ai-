@@ -1,0 +1,69 @@
+import os
+import subprocess
+import sys
+
+from passlib.context import CryptContext
+
+from services import prediction
+from utils.security import hash_password, verify_password
+
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def test_server_startup_does_not_import_heavy_libraries():
+    """Sign-in and every other non-AI request must not pay for TensorFlow,
+    alembic, or the PDF libraries: on a fractional-CPU host those imports
+    made every cold start and every login slow."""
+    code = (
+        "import sys, main; "
+        "heavy = [m for m in ('tensorflow', 'alembic', 'fpdf', 'pypdf') if m in sys.modules]; "
+        "print('HEAVY:' + ','.join(heavy))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=BACKEND_DIR,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+
+    assert result.returncode == 0, result.stderr[-500:]
+    assert "HEAVY:" in result.stdout
+    assert result.stdout.strip().splitlines()[-1] == "HEAVY:", result.stdout[-300:]
+
+
+def test_password_hashing_uses_cost_10_and_still_verifies_older_hashes():
+    hashed = hash_password("a-test-password-123")
+    assert hashed.startswith("$2b$10$")
+    assert verify_password("a-test-password-123", hashed)
+    assert not verify_password("wrong-password", hashed)
+
+    # Hashes created earlier at the old default cost (12) must keep working.
+    old_hash = CryptContext(schemes=["bcrypt"], bcrypt__rounds=12).hash("legacy-password-1")
+    assert old_hash.startswith("$2b$12$")
+    assert verify_password("legacy-password-1", old_hash)
+
+
+def test_model_warmup_requires_login(client):
+    assert client.post("/model/warmup").status_code == 401
+
+
+def test_model_warmup_starts_loading_without_blocking(client, auth_headers, monkeypatch):
+    calls = []
+    monkeypatch.setattr(prediction, "warm_up_in_background", lambda: calls.append(1) or True)
+    monkeypatch.setattr(prediction, "is_model_loaded", lambda: False)
+
+    response = client.post("/model/warmup", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"loaded": False, "started": True}
+    assert calls == [1]
+
+
+def test_get_model_loads_once_and_is_reused(monkeypatch):
+    sentinel = object()
+    monkeypatch.setattr(prediction, "_model", sentinel)
+
+    assert prediction.get_model() is sentinel
+    assert prediction.is_model_loaded() is True
+    assert prediction.warm_up_in_background() is False

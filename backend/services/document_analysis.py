@@ -1,7 +1,5 @@
 import re
 
-from pypdf import PdfReader
-
 
 # ============================================================
 # MEDIVISION AI - WRITTEN MEDICAL REPORT ANALYSIS
@@ -72,6 +70,8 @@ def extract_text(file_path: str, content_type: str) -> str:
     """Best-effort text extraction. PDFs must contain a real text layer -
     scanned/image-only pages return no text (no OCR is performed)."""
     if content_type == "application/pdf":
+        from pypdf import PdfReader  # slow to import; only PDFs need it
+
         reader = PdfReader(file_path)
         pages = [page.extract_text() or "" for page in reader.pages]
         return "\n".join(pages)

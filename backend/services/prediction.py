@@ -1,6 +1,8 @@
+import logging
 import os
+import threading
+
 import numpy as np
-import tensorflow as tf
 from PIL import Image
 
 
@@ -35,22 +37,53 @@ THRESHOLD = 0.82
 
 
 # ============================================================
-# LOAD MODEL ONCE
+# LOAD MODEL LAZILY, ONCE
 # ============================================================
+#
+# Importing TensorFlow and loading the model costs about a minute of CPU on
+# a small host and ~350 MB of RAM, and most requests (sign-in, patients,
+# reports, chat) never need it. Loading it at import time made every server
+# start - including waking from sleep on a free tier - slow for everyone.
+# It now loads on first use, or earlier via warm_up_in_background().
 
-print("Loading MediVision AI model...")
-print("Model path:", MODEL_PATH)
+logger = logging.getLogger(__name__)
 
-if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError(
-        f"Model not found: {MODEL_PATH}"
-    )
+_model = None
+_model_lock = threading.Lock()
 
-model = tf.keras.models.load_model(
-    MODEL_PATH
-)
 
-print("MediVision AI model loaded successfully.")
+def get_model():
+    """The loaded Keras model. The first call loads it (thread-safe: other
+    callers wait on the same load instead of starting a second one)."""
+    global _model
+
+    if _model is None:
+        with _model_lock:
+            if _model is None:
+                if not os.path.exists(MODEL_PATH):
+                    raise FileNotFoundError(f"Model not found: {MODEL_PATH}")
+
+                logger.info("Loading MediVision AI model from %s", MODEL_PATH)
+                import tensorflow as tf
+
+                _model = tf.keras.models.load_model(MODEL_PATH)
+                logger.info("MediVision AI model loaded successfully.")
+
+    return _model
+
+
+def is_model_loaded() -> bool:
+    return _model is not None
+
+
+def warm_up_in_background() -> bool:
+    """Starts loading the model on a background thread so the next analysis
+    doesn't pay for it. Returns False if it is already loaded."""
+    if _model is not None:
+        return False
+
+    threading.Thread(target=get_model, name="model-warmup", daemon=True).start()
+    return True
 
 
 # ============================================================
@@ -106,7 +139,7 @@ def predict_disease(file_path: str):
     # --------------------------------------------------------
 
     probability = float(
-        model.predict(
+        get_model().predict(
             image_array,
             verbose=0
         )[0][0]

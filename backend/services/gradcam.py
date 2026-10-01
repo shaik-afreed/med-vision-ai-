@@ -1,10 +1,9 @@
 import os
 
 import numpy as np
-import tensorflow as tf
 from PIL import Image
 
-from services.prediction import model, IMAGE_SIZE
+from services.prediction import get_model, IMAGE_SIZE
 
 
 # ============================================================
@@ -43,6 +42,10 @@ def _build_gradcam_components():
 
     if _conv_submodel is not None:
         return
+
+    import tensorflow as tf
+
+    model = get_model()
 
     base_model = None
     post_layers = []
@@ -84,6 +87,8 @@ def _forward_from_conv(conv_output):
 def _compute_heatmap(image_array):
     """image_array: float32 numpy array, shape (1, H, W, 3), raw 0-255
     pixel values - same format predict_disease() feeds the model."""
+    import tensorflow as tf
+
     _build_gradcam_components()
 
     preprocessed = tf.keras.applications.mobilenet_v2.preprocess_input(

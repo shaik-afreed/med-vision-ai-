@@ -1,9 +1,12 @@
 import json
 import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from core.config import settings
+from dependencies.auth import get_current_user
+from models.user import User
+from services import prediction
 
 router = APIRouter(prefix="/model", tags=["AI Model"])
 
@@ -45,3 +48,12 @@ def model_info():
         "evaluated_on_images": report["holdout_subset"]["total_images"],
         "known_limitations": report.get("known_limitations", []),
     }
+
+
+@router.post("/warmup")
+def warm_up_model(current_user: User = Depends(get_current_user)):
+    """Starts loading the AI model in the background and returns at once.
+    The frontend calls this after sign-in so the first X-ray analysis
+    doesn't wait for TensorFlow to load. Idempotent."""
+    started = prediction.warm_up_in_background()
+    return {"loaded": prediction.is_model_loaded(), "started": started}

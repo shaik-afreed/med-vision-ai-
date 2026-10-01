@@ -4,7 +4,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import settings
-from database.migrate import run_migrations
 
 from routers.home import router as home_router
 from routers.auth import router as auth_router
@@ -24,6 +23,9 @@ from database.database import engine
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     if settings.AUTO_MIGRATE:
+        # Imported here: alembic is slow to import and unused otherwise.
+        from database.migrate import run_migrations
+
         run_migrations()
     yield
 
