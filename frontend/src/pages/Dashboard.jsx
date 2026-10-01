@@ -40,7 +40,7 @@ function formatShortDate(value) {
 }
 
 function resultTone(report) {
-  if (["inconclusive", "outside_training_ages"].includes(report.assessment?.category)) return "borderline";
+  if (["inconclusive", "outside_training_ages", "unlike_training_images"].includes(report.assessment?.category)) return "borderline";
   return report.prediction === "Pneumonia" ? "pneumonia" : "normal";
 }
 
@@ -245,8 +245,8 @@ function Dashboard() {
                     </div>
                     <div className={`report-result ${tone}`}>
                       <strong>
-                        {report.assessment?.category === "outside_training_ages"
-                          ? "Unreliable for age"
+                        {["outside_training_ages", "unlike_training_images"].includes(report.assessment?.category)
+                          ? "Unreliable result"
                           : tone === "borderline"
                             ? "Inconclusive"
                             : report.prediction || "Pending"}

@@ -198,6 +198,7 @@ async def upload_report(
             pneumonia_probability=result["pneumonia_probability"],
             threshold_used=result["threshold"],
             model_version=settings.MODEL_VERSION,
+            domain_score=result.get("domain_score"),
             gradcam_path=gradcam_path,
             ai_explanation=ai_explanation,
             status="completed",

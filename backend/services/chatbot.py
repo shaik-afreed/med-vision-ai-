@@ -365,6 +365,15 @@ def _answer_result(ctx: dict | None) -> str:
         return NO_RESULT
     threshold_pct = ctx["threshold"] * 100
     assessment = ctx.get("assessment")
+    if assessment and assessment["category"] == "unlike_training_images":
+        return (
+            f"The AI scored this X-ray {ctx['pneumonia_probability']:.2f}% for pneumonia, but that score "
+            "should not be used: the image does not look like the children's chest X-rays the model was "
+            "trained on (it may be an adult X-ray, another kind of image, or a very different scanner), "
+            "and on such images it is often confidently wrong.\n"
+            "- Treat this result as unreliable, whichever way it points.\n"
+            "- A qualified clinician must read the X-ray itself."
+        )
     if assessment and assessment["category"] == "outside_training_ages":
         return (
             f"The AI scored this X-ray {ctx['pneumonia_probability']:.2f}% for pneumonia, but that score "

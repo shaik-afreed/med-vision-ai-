@@ -58,7 +58,9 @@ export default function ResultPanel({ report, patientName }) {
   // one; for a patient outside the model's training ages (adults) the score
   // is unreliable whichever way it points.
   const isOutsideAges = assessment?.category === "outside_training_ages";
-  const isBorderline = assessment?.category === "inconclusive" || isOutsideAges;
+  const isUnlikeTraining = assessment?.category === "unlike_training_images";
+  const isUnreliable = isOutsideAges || isUnlikeTraining;
+  const isBorderline = assessment?.category === "inconclusive" || isUnreliable;
   const panelTone = isBorderline ? "borderline-result" : isPneumonia ? "pneumonia-result" : "normal-result";
   const toneIcon = isBorderline ? "alert" : isPneumonia ? "alert" : "check";
 
@@ -84,8 +86,10 @@ export default function ResultPanel({ report, patientName }) {
           <strong>AI Screening Result</strong>
         </div>
         <span className="ai-result-badge">
-          {isOutsideAges
-            ? "Not reliable for this age"
+          {isUnreliable
+            ? isOutsideAges
+              ? "Not reliable for this age"
+              : "Not reliable for this image"
             : `${report.prediction || "Pending"}${isBorderline ? " · borderline" : ""}`}
         </span>
       </div>
@@ -151,11 +155,11 @@ export default function ResultPanel({ report, patientName }) {
       {report.ai_explanation && (
         <div className="ai-result-explanation">
           <span className="ai-result-explanation-label">What this means</span>
-          {isOutsideAges && (
+          {isUnreliable && (
             <p>
               <strong>
-                Because of the patient's age, the text below only describes what the model did; it
-                is not a usable result.
+                Because the score is not reliable here, the text below only describes what the model
+                did; it is not a usable result.
               </strong>
             </p>
           )}

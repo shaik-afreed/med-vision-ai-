@@ -16,8 +16,14 @@ BANDS_PATH = os.path.join(REPO_ROOT, "ai_model", "probability_bands.json")
 TRAINING_AGE_MAX = 10
 
 OUTSIDE_AGES = "outside_training_ages"
+UNLIKE_TRAINING = "unlike_training_images"
+
+# The image-domain check (services/prediction.py) flags an image when its
+# P(unlike the training X-rays) is at or above this.
+DOMAIN_FLAG_AT = 0.5
 
 LABELS = {
+    UNLIKE_TRAINING: "Unreliable - this image does not look like the children's X-rays the AI was trained on",
     OUTSIDE_AGES: "Unreliable for this patient's age - the AI was trained only on X-rays of young children",
     "very_high": "Very high likelihood of pneumonia",
     "high": "High likelihood of pneumonia",
@@ -28,6 +34,12 @@ LABELS = {
 }
 
 ADVICE = {
+    UNLIKE_TRAINING: (
+        "The AI learned only from children's chest X-rays. This image looks different (for example an adult "
+        "X-ray, another kind of image, or a very different scanner), and on such images it often gives "
+        "confident but wrong scores, so this score should not be used. A qualified clinician must read the "
+        "X-ray itself."
+    ),
     OUTSIDE_AGES: (
         "This AI model learned from X-rays of children aged 1-5 and often gives confident but wrong "
         "scores on adult or older-child X-rays, so this score should not be used. A qualified "
@@ -57,13 +69,16 @@ def assess(
     pneumonia_probability_percent: float | None,
     model_version: str | None,
     patient_age: int | None = None,
+    domain_score: float | None = None,
 ) -> dict | None:
     """Returns {"category", "label", "advice", "historical_pneumonia_share",
     "historical_images", "evaluated_on", "score_category"} or None if no
     probability. The historical figures are included only when the saved
     table describes the same model version that produced this probability.
     For a patient older than TRAINING_AGE_MAX the category is
-    "outside_training_ages" and score_category keeps the score's own band."""
+    "outside_training_ages"; if the image itself is flagged as unlike the
+    training X-rays (domain_score >= DOMAIN_FLAG_AT) it is
+    "unlike_training_images". score_category keeps the score's own band."""
     if pneumonia_probability_percent is None:
         return None
 
@@ -79,6 +94,17 @@ def assess(
                     "category": OUTSIDE_AGES,
                     "label": LABELS[OUTSIDE_AGES],
                     "advice": ADVICE[OUTSIDE_AGES],
+                    "historical_pneumonia_share": None,
+                    "historical_images": None,
+                    "evaluated_on": None,
+                    "score_category": band["category"],
+                }
+
+            if domain_score is not None and domain_score >= DOMAIN_FLAG_AT:
+                return {
+                    "category": UNLIKE_TRAINING,
+                    "label": LABELS[UNLIKE_TRAINING],
+                    "advice": ADVICE[UNLIKE_TRAINING],
                     "historical_pneumonia_share": None,
                     "historical_images": None,
                     "evaluated_on": None,

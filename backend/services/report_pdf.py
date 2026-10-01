@@ -34,7 +34,7 @@ PALETTE = {
 CATEGORY_TONE = {
     "very_high": "alert", "high": "alert", "inconclusive": "caution",
     "probably_normal": "clear", "low": "clear", "very_low": "clear",
-    "outside_training_ages": "caution",
+    "outside_training_ages": "caution", "unlike_training_images": "caution",
 }
 
 
@@ -129,7 +129,7 @@ def build_report_pdf(report, patient) -> bytes:
     # ---------- AI result ----------
     _section(pdf, "AI screening result")
     probability = report.pneumonia_probability
-    assessment = assess(probability, report.model_version, patient.age)
+    assessment = assess(probability, report.model_version, patient.age, report.domain_score)
     fill, ink = PALETTE[CATEGORY_TONE.get(assessment["category"], "caution")] if assessment else PALETTE["caution"]
 
     box_top = pdf.get_y()
@@ -142,8 +142,8 @@ def build_report_pdf(report, patient) -> bytes:
     pdf.set_x(PAGE_MARGIN + 4)
     pdf.set_font("Helvetica", "", 9)
     threshold_pct = (report.threshold_used or 0) * 100
-    outside_ages = bool(assessment) and assessment["category"] == "outside_training_ages"
-    classification_label = "AI classification (not usable for this age)" if outside_ages else "AI classification"
+    unreliable = bool(assessment) and assessment["category"] in ("outside_training_ages", "unlike_training_images")
+    classification_label = "AI classification (not usable)" if unreliable else "AI classification"
     pdf.multi_cell(
         CONTENT_WIDTH - 8, 5,
         _t(
@@ -214,10 +214,10 @@ def build_report_pdf(report, patient) -> bytes:
     # ---------- interpretation ----------
     if report.ai_explanation:
         _section(pdf, "Interpretation")
-        if outside_ages:
+        if unreliable:
             _paragraph(
                 pdf,
-                "Because of the patient's age, the text below only describes what the model did; "
+                "Because the score is not reliable here, the text below only describes what the model did; "
                 "it is not a usable result.",
             )
         _paragraph(pdf, report.ai_explanation)

@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import threading
@@ -72,6 +73,78 @@ def get_model():
     return _model
 
 
+# ============================================================
+# "DOES THIS LOOK LIKE THE TRAINING DATA?" CHECK
+# ============================================================
+#
+# The model learned from children's chest X-rays only and is confidently wrong
+# on other images (adult X-rays scored "pneumonia 99%"). ai_model/external/
+# domain_check.py fitted a small logistic regression on the model's own pooled
+# image features (children's training images vs NIH adult X-rays) and passed
+# its pre-registered test (flagged 99.3% of held-out adults, 0.16% of children's
+# test images). domain_probability() returns P(image is unlike the training
+# data) from those saved numbers; None if the file is missing.
+
+DOMAIN_CHECK_PATH = os.path.abspath(
+    os.path.join(BASE_DIR, "..", "ai_model", "external", "domain_check.json")
+)
+DOMAIN_FLAG_AT = 0.5
+
+_domain = None
+_domain_loaded = False
+_feature_model = None
+
+
+def _load_domain_check():
+    global _domain, _domain_loaded
+
+    if not _domain_loaded:
+        _domain_loaded = True
+        try:
+            with open(DOMAIN_CHECK_PATH, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            if saved.get("passes") and "model" in saved:
+                m = saved["model"]
+                _domain = {
+                    "mean": np.asarray(m["mean"], dtype=np.float32),
+                    "scale": np.asarray(m["scale"], dtype=np.float32),
+                    "coef": np.asarray(m["coef"], dtype=np.float32),
+                    "intercept": float(m["intercept"]),
+                }
+        except (OSError, ValueError, KeyError):
+            logger.warning("Image-domain check unavailable (%s)", DOMAIN_CHECK_PATH)
+
+    return _domain
+
+
+def domain_probability(features) -> float | None:
+    """P(this image is unlike the children's training X-rays), 0-1."""
+    domain = _load_domain_check()
+    if domain is None:
+        return None
+
+    z = (np.asarray(features, dtype=np.float32) - domain["mean"]) / domain["scale"]
+    logit = float(z @ domain["coef"]) + domain["intercept"]
+    return float(1.0 / (1.0 + np.exp(-logit)))
+
+
+def _get_feature_model():
+    """The same network, also returning the pooled features the check uses, so
+    one forward pass yields both the prediction and the check."""
+    global _feature_model
+
+    if _feature_model is None:
+        import tensorflow as tf
+
+        model = get_model()
+        _feature_model = tf.keras.Model(
+            model.input,
+            [model.output, model.get_layer("global_average_pooling2d").output],
+        )
+
+    return _feature_model
+
+
 def is_model_loaded() -> bool:
     return _model is not None
 
@@ -138,12 +211,19 @@ def predict_disease(file_path: str):
     # MODEL PREDICTION
     # --------------------------------------------------------
 
-    probability = float(
-        get_model().predict(
-            image_array,
-            verbose=0
-        )[0][0]
-    )
+    domain_score = None
+
+    if _load_domain_check() is not None:
+        outputs, pooled = _get_feature_model().predict(image_array, verbose=0)
+        probability = float(outputs[0][0])
+        domain_score = domain_probability(pooled[0])
+    else:
+        probability = float(
+            get_model().predict(
+                image_array,
+                verbose=0
+            )[0][0]
+        )
 
     # --------------------------------------------------------
     # CLASSIFICATION
@@ -181,5 +261,6 @@ def predict_disease(file_path: str):
             probability * 100,
             6
         ),
+        "domain_score": None if domain_score is None else round(domain_score, 6),
         "threshold": THRESHOLD
     }

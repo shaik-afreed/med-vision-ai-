@@ -57,3 +57,20 @@ def test_children_within_the_training_ages_keep_the_measured_bands(age):
 
 def test_unknown_age_keeps_the_measured_bands():
     assert assess(99.35, V1)["category"] == "very_high"
+
+
+def test_image_flagged_as_unlike_training_data_is_unreliable_even_for_a_child():
+    result = assess(99.35, V1, patient_age=4, domain_score=0.97)
+    assert result["category"] == "unlike_training_images"
+    assert "does not look like the children's X-rays" in result["label"]
+    assert result["historical_pneumonia_share"] is None
+    assert result["score_category"] == "very_high"
+
+
+def test_image_that_looks_like_training_data_keeps_the_measured_bands():
+    assert assess(99.35, V1, patient_age=4, domain_score=0.02)["category"] == "very_high"
+    assert assess(99.35, V1, patient_age=4, domain_score=None)["category"] == "very_high"
+
+
+def test_age_rule_still_takes_precedence_over_the_image_check():
+    assert assess(99.35, V1, patient_age=40, domain_score=0.97)["category"] == "outside_training_ages"

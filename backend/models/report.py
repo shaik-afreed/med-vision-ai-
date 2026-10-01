@@ -38,6 +38,11 @@ class Report(Base):
     # rule-based explanation generated alongside it. Both are nullable:
     # heatmap generation is a best-effort explainability feature and must
     # never block saving the underlying prediction if it fails.
+    # P(the image is unlike the children's X-rays the model was trained on),
+    # 0-1, from the image-domain check in services/prediction.py. Null for
+    # reports made before the check existed.
+    domain_score = Column(Float, nullable=True)
+
     gradcam_path = Column(String, nullable=True)
     ai_explanation = Column(String, nullable=True)
 
@@ -62,4 +67,4 @@ class Report(Base):
         from services.assessment import assess
 
         age = self.patient.age if self.patient is not None else None
-        return assess(self.pneumonia_probability, self.model_version, age)
+        return assess(self.pneumonia_probability, self.model_version, age, self.domain_score)
