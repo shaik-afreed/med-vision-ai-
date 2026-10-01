@@ -67,3 +67,59 @@ def test_get_model_loads_once_and_is_reused(monkeypatch):
     assert prediction.get_model() is sentinel
     assert prediction.is_model_loaded() is True
     assert prediction.warm_up_in_background() is False
+
+
+def test_xray_analysis_does_not_block_other_requests(client, auth_headers, monkeypatch):
+    """predict_disease is blocking TensorFlow work. It used to run directly
+    inside the async upload endpoint and froze the whole server (even
+    /health) until it finished; it must run in a worker thread."""
+    import threading
+    import time
+
+    from routers import report as report_router
+    from tests.conftest import make_test_image_bytes
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_predict(_path):
+        started.set()
+        assert release.wait(timeout=30)
+        return {"disease": "Normal", "confidence": 90.0, "pneumonia_probability": 10.0, "threshold": 0.82}
+
+    monkeypatch.setattr(report_router, "predict_disease", slow_predict)
+    monkeypatch.setattr(report_router, "generate_gradcam", lambda *a, **k: "explanation")
+
+    patient_id = client.post(
+        "/patients/",
+        json={"full_name": "Slow Case", "age": 4, "gender": "Male", "phone": "1", "address": "x", "disease": None},
+        headers=auth_headers,
+    ).json()["patient"]["id"]
+
+    outcome = {}
+
+    def upload():
+        files = {"file": ("x.jpg", make_test_image_bytes(), "image/jpeg")}
+        outcome["response"] = client.post(
+            "/reports/upload",
+            data={"patient_id": str(patient_id), "report_type": "X-Ray"},
+            files=files,
+            headers=auth_headers,
+        )
+
+    worker = threading.Thread(target=upload)
+    worker.start()
+    try:
+        assert started.wait(timeout=30), "analysis never started"
+
+        began = time.monotonic()
+        health = client.get("/health")
+        waited = time.monotonic() - began
+
+        assert health.status_code == 200
+        assert waited < 5, f"/health waited {waited:.1f}s behind a running analysis"
+    finally:
+        release.set()
+        worker.join(timeout=60)
+
+    assert outcome["response"].status_code == 200

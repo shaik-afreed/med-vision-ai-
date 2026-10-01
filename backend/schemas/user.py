@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class UserRegister(BaseModel):
@@ -9,6 +9,14 @@ class UserRegister(BaseModel):
     # here too since the frontend constraint is trivially bypassable via
     # direct API calls.
     password: str = Field(min_length=8)
+
+    # EmailStr only lowercases the domain; "Sam@x.com" and "sam@x.com" must
+    # be one account, and sign-in must not depend on how the address was
+    # capitalized (phone keyboards often capitalize the first letter).
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower()
 
 
 class UserLogin(BaseModel):

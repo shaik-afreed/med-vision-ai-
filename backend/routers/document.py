@@ -3,6 +3,7 @@ import logging
 import os
 import uuid
 
+from fastapi.concurrency import run_in_threadpool
 from fastapi import (
     APIRouter,
     UploadFile,
@@ -131,7 +132,8 @@ async def upload_document(
         # TEXT EXTRACTION + LAB VALUE ANALYSIS
         # ==============================
 
-        analysis = analyze_document(file_path, file.content_type)
+        # PDF text extraction is blocking work; keep it off the event loop.
+        analysis = await run_in_threadpool(analyze_document, file_path, file.content_type)
 
         # ==============================
         # SAVE DOCUMENT + ANALYSIS

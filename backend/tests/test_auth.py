@@ -107,3 +107,45 @@ def test_successful_login_resets_failure_count(client, register_and_login):
         "/auth/login", data={"username": email, "password": "testpass123"}
     )
     assert still_ok.status_code == 200
+
+
+def test_email_is_case_insensitive_for_register_and_login(client):
+    first = client.post(
+        "/auth/register",
+        json={"name": "Dana", "email": "Dana.Smith@Example.COM", "password": "pw123456"},
+    )
+    assert first.status_code == 201
+    # Stored normalized, so there is one canonical address.
+    assert first.json()["email"] == "dana.smith@example.com"
+
+    # The same address in any capitalization is the same account...
+    duplicate = client.post(
+        "/auth/register",
+        json={"name": "Dana 2", "email": "DANA.SMITH@example.com", "password": "pw123456"},
+    )
+    assert duplicate.status_code == 400
+
+    # ...and signing in works however it is typed.
+    for typed in ("Dana.Smith@Example.COM", "dana.smith@example.com", " DANA.SMITH@EXAMPLE.COM "):
+        response = client.post("/auth/login", data={"username": typed, "password": "pw123456"})
+        assert response.status_code == 200, typed
+
+
+def test_account_stored_with_capitals_before_normalization_can_still_sign_in(client):
+    from models.user import User
+    from tests.conftest import TestingSessionLocal
+    from utils.security import hash_password
+
+    with TestingSessionLocal() as db:
+        db.add(User(name="Old", email="OldUser@Example.com", password=hash_password("pw123456")))
+        db.commit()
+
+    for typed in ("OldUser@Example.com", "olduser@example.com"):
+        response = client.post("/auth/login", data={"username": typed, "password": "pw123456"})
+        assert response.status_code == 200, typed
+
+    again = client.post(
+        "/auth/register",
+        json={"name": "Dup", "email": "olduser@example.com", "password": "pw123456"},
+    )
+    assert again.status_code == 400

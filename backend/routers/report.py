@@ -1,7 +1,9 @@
 import logging
 import os
+import threading
 import uuid
 
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, Response
 from PIL import Image, UnidentifiedImageError
 import io
@@ -49,6 +51,40 @@ EXTENSION_BY_CONTENT_TYPE = {
 }
 
 MAX_UPLOAD_BYTES = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+# One analysis at a time: TensorFlow inference is CPU- and memory-heavy, and
+# on a small host (512 MB) two at once risks running out of memory.
+_analysis_lock = threading.Lock()
+
+
+def _analyze_xray(file_path: str, safe_filename: str, upload_folder: str):
+    """Prediction plus best-effort heatmap. Blocking (TensorFlow), so it runs
+    in a worker thread: calling it directly inside the async endpoint froze
+    every other request - including /health - until it finished."""
+    with _analysis_lock:
+        result = predict_disease(file_path)
+
+        # Grad-CAM is a supplementary explainability feature on top of the
+        # prediction: if it fails, the report still saves with the prediction.
+        gradcam_path = None
+        ai_explanation = None
+
+        try:
+            gradcam_filename = f"{os.path.splitext(safe_filename)[0]}_gradcam.png"
+            gradcam_full_path = os.path.join(upload_folder, gradcam_filename)
+
+            ai_explanation = generate_gradcam(
+                file_path,
+                result["disease"],
+                result["pneumonia_probability"],
+                result["threshold"],
+                gradcam_full_path,
+            )
+            gradcam_path = gradcam_full_path
+        except Exception as gradcam_error:
+            logger.warning("Grad-CAM generation failed for %s: %s", file_path, gradcam_error)
+
+    return result, gradcam_path, ai_explanation
 
 
 def _get_owned_patient(patient_id: int, current_user: User, db: Session) -> Patient:
@@ -138,36 +174,12 @@ async def upload_report(
             buffer.write(content)
 
         # ==============================
-        # AI PREDICTION
+        # AI PREDICTION + GRAD-CAM (in a worker thread)
         # ==============================
 
-        result = predict_disease(file_path)
-
-        # ==============================
-        # GRAD-CAM EXPLAINABILITY (best-effort)
-        # ==============================
-        # Heatmap generation is a supplementary explainability feature on
-        # top of the prediction above, not part of it: if it fails for any
-        # reason, the report must still save with the prediction that was
-        # already computed, just without a heatmap/explanation attached.
-
-        gradcam_path = None
-        ai_explanation = None
-
-        try:
-            gradcam_filename = f"{os.path.splitext(safe_filename)[0]}_gradcam.png"
-            gradcam_full_path = os.path.join(upload_folder, gradcam_filename)
-
-            ai_explanation = generate_gradcam(
-                file_path,
-                result["disease"],
-                result["pneumonia_probability"],
-                result["threshold"],
-                gradcam_full_path,
-            )
-            gradcam_path = gradcam_full_path
-        except Exception as gradcam_error:
-            logger.warning("Grad-CAM generation failed for %s: %s", file_path, gradcam_error)
+        result, gradcam_path, ai_explanation = await run_in_threadpool(
+            _analyze_xray, file_path, safe_filename, upload_folder
+        )
 
         # ==============================
         # SAVE REPORT + AI RESULT

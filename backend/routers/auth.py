@@ -6,6 +6,7 @@ from utils.security import hash_password, verify_password
 from database.database import get_db
 from models.user import User
 from schemas.user import UserRegister, UserResponse, TokenResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -26,7 +27,9 @@ router = APIRouter(
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(user: UserRegister, db: Session = Depends(get_db)):
 
-    existing_user = db.query(User).filter(User.email == user.email).first()
+    # user.email is already lowercased by the schema; match case-insensitively
+    # so an older account stored with capitals still counts as taken.
+    existing_user = db.query(User).filter(func.lower(User.email) == user.email).first()
 
     if existing_user:
         raise HTTPException(
@@ -69,8 +72,10 @@ def login(
             headers={"Retry-After": str(wait_seconds)},
         )
 
+    # Case-insensitive, so accounts created before emails were normalized
+    # (which may contain capitals) still sign in.
     existing_user = db.query(User).filter(
-        User.email == form_data.username
+        func.lower(User.email) == limiter_key
     ).first()
 
     if not existing_user or not verify_password(
