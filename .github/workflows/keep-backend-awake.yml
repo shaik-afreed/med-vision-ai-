@@ -1,0 +1,27 @@
+# Render's free plan stops the backend after ~15 idle minutes. A stopped
+# instance makes the next sign-in wait ~1 minute and loses the SQLite
+# database (accounts, patients, reports). Pinging /health every 10 minutes
+# keeps it running. One always-on service fits the free plan's 750 hours/month.
+name: Keep backend awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the backend health check
+        run: |
+          for attempt in 1 2 3; do
+            if curl --fail --silent --show-error --max-time 120 https://med-vision-ai-lmos.onrender.com/health; then
+              exit 0
+            fi
+            sleep 15
+          done
+          exit 1
