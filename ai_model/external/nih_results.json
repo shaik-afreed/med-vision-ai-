@@ -1,0 +1,62 @@
+{
+ "images": 1145,
+ "pneumonia": 229,
+ "calibration_images": 576,
+ "test_images": 569,
+ "test_pneumonia": 106,
+ "median_age": 46.0,
+ "models": {
+  "V1": {
+   "auc_test": 0.578,
+   "at_calibrated_cutoff": {
+    "cutoff": 0.8535,
+    "sensitivity": 0.8585,
+    "specificity": 0.2311,
+    "accuracy": 0.348,
+    "missed_pneumonia": 15,
+    "false_alarms": 356
+   },
+   "at_current_cutoff": {
+    "cutoff": 0.82,
+    "sensitivity": 0.8962,
+    "specificity": 0.1944,
+    "accuracy": 0.3251,
+    "missed_pneumonia": 11,
+    "false_alarms": 373
+   }
+  },
+  "B": {
+   "auc_test": 0.6141,
+   "at_calibrated_cutoff": {
+    "cutoff": 0.8709,
+    "sensitivity": 0.717,
+    "specificity": 0.4406,
+    "accuracy": 0.4921,
+    "missed_pneumonia": 30,
+    "false_alarms": 259
+   },
+   "at_current_cutoff": {
+    "cutoff": 0.842,
+    "sensitivity": 0.7264,
+    "specificity": 0.419,
+    "accuracy": 0.4763,
+    "missed_pneumonia": 29,
+    "false_alarms": 269
+   }
+  }
+ },
+ "auc_gain_B_minus_V1": {
+  "estimate": 0.0361,
+  "ci95": [
+   -0.0015,
+   0.0769
+  ]
+ },
+ "accuracy_gain_B_minus_V1_at_calibrated_cutoffs": {
+  "ci95": [
+   0.1037,
+   0.181
+  ]
+ },
+ "B_demonstrably_better": false
+}
