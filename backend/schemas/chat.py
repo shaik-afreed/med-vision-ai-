@@ -9,11 +9,16 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    # At most one of these: the X-ray report or the lab/medical document
+    # the user is asking about.
     report_id: int | None = None
+    document_id: int | None = None
     messages: list[ChatMessage] = Field(min_length=1, max_length=20)
 
     @model_validator(mode="after")
     def check_turn_order(self):
+        if self.report_id is not None and self.document_id is not None:
+            raise ValueError("send report_id or document_id, not both")
         for index, message in enumerate(self.messages):
             expected = "user" if index % 2 == 0 else "assistant"
             if message.role != expected:

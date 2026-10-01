@@ -7,20 +7,59 @@ import Icon from "./Icon";
 // the user; an odd-length tail always starts with a user turn.
 const MAX_HISTORY = 19;
 
-const SUGGESTIONS_WITH_RESULT = [
-  "What does this result mean?",
-  "What does the heatmap show?",
-  "How reliable is this screening?",
-  "What should happen next?",
-];
+const SUGGESTIONS = {
+  xray: {
+    withSubject: [
+      "What does this result mean?",
+      "What does the heatmap show?",
+      "How reliable is this screening?",
+      "What should happen next?",
+    ],
+    withoutSubject: [
+      "How does this X-ray screening work?",
+      "What is pneumonia?",
+      "What can this tool not detect?",
+    ],
+    prompt: "Ask anything about this screening result:",
+    empty: "No X-ray analyzed yet — you can still ask general questions.",
+  },
+  document: {
+    withSubject: [
+      "What do these results mean?",
+      "Which values are high or low?",
+      "What is a reference range?",
+      "What should happen next?",
+    ],
+    withoutSubject: [
+      "What can this report analyzer read?",
+      "What is a reference range?",
+      "What do High and Low mean?",
+    ],
+    prompt: "Ask anything about this lab report:",
+    empty: "No report analyzed yet — you can still ask general questions.",
+  },
+};
 
-const SUGGESTIONS_WITHOUT_RESULT = [
-  "How does this X-ray screening work?",
-  "What is pneumonia?",
-  "What can this tool not detect?",
-];
+function describeSubject(report, document) {
+  if (report) {
+    return `Discussing: ${report.prediction} result (pneumonia probability ${formatPercent(
+      report.pneumonia_probability
+    )}%)`;
+  }
 
-export default function XRayChatbot({ report }) {
+  const findings = document.findings || [];
+  const flagged = findings.filter((f) => f.status === "High" || f.status === "Low").length;
+  return `Discussing: ${document.file_name} (${findings.length} value${
+    findings.length === 1 ? "" : "s"
+  } read, ${flagged} outside range)`;
+}
+
+/**
+ * Floating AI assistant. mode "xray" takes the analyzed `report`, mode
+ * "document" the analyzed lab `document`; the backend answers from that
+ * result's data only.
+ */
+export default function AiAssistant({ mode = "xray", report = null, document = null }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusError, setStatusError] = useState("");
@@ -30,12 +69,14 @@ export default function XRayChatbot({ report }) {
   const [error, setError] = useState("");
   const listRef = useRef(null);
 
-  const reportId = report?.id ?? null;
+  const subjectKey = report ? `report-${report.id}` : document ? `document-${document.id}` : "none";
+  const hasSubject = Boolean(report || document);
+  const text = SUGGESTIONS[mode];
 
   useEffect(() => {
     setMessages([]);
     setError("");
-  }, [reportId]);
+  }, [subjectKey]);
 
   useEffect(() => {
     if (!open || status) return;
@@ -69,7 +110,10 @@ export default function XRayChatbot({ report }) {
       const payload = history
         .slice(-MAX_HISTORY)
         .map(({ role, content }) => ({ role, content }));
-      const data = await sendChatMessage(reportId, payload);
+      const data = await sendChatMessage(
+        { reportId: report?.id, documentId: document?.id },
+        payload
+      );
       setMessages([
         ...history,
         { role: "assistant", content: data.reply, source: data.source, model: data.model },
@@ -93,7 +137,7 @@ export default function XRayChatbot({ report }) {
   }
 
   const offlineMode = status && !status.llm_available;
-  const suggestions = report ? SUGGESTIONS_WITH_RESULT : SUGGESTIONS_WITHOUT_RESULT;
+  const suggestions = hasSubject ? text.withSubject : text.withoutSubject;
 
   return (
     <>
@@ -118,11 +162,7 @@ export default function XRayChatbot({ report }) {
           </header>
 
           <div className="chatbot-context">
-            {report
-              ? `Discussing: ${report.prediction} result (pneumonia probability ${formatPercent(
-                  report.pneumonia_probability
-                )}%)`
-              : "No X-ray analyzed yet — you can still ask general questions."}
+            {hasSubject ? describeSubject(report, document) : text.empty}
           </div>
 
           <div className="chatbot-messages" ref={listRef} aria-live="polite">
@@ -137,7 +177,7 @@ export default function XRayChatbot({ report }) {
 
             {messages.length === 0 && !statusError && (
               <div className="chatbot-suggestions">
-                <p>Ask anything about this screening result:</p>
+                <p>{text.prompt}</p>
                 {suggestions.map((suggestion) => (
                   <button
                     key={suggestion}

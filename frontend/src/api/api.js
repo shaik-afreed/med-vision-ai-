@@ -228,19 +228,20 @@ export async function getDocumentFileUrl(documentId) {
 }
 
 // ========================================
-// X-RAY RESULTS CHATBOT
+// AI ASSISTANT (X-ray results and lab reports)
 // ========================================
-// The browser only talks to our backend, which answers with a local
-// open-source model (or built-in answers) - no external AI service.
+// The browser only talks to our backend, which picks the model (hosted,
+// local, or built-in answers) and sends it only the result's data.
 
 export async function getChatStatus() {
   const response = await api.get("/chat/status");
   return response.data;
 }
 
-export async function sendChatMessage(reportId, messages) {
+export async function sendChatMessage({ reportId = null, documentId = null }, messages) {
   const response = await api.post("/chat", {
     report_id: reportId ?? null,
+    document_id: documentId ?? null,
     messages,
   });
   return response.data;

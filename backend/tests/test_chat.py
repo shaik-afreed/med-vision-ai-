@@ -435,3 +435,99 @@ def test_plain_text_strips_markdown_and_odd_spaces():
     assert "- first point" in cleaned and "- second point" in cleaned
     assert "End-to-end." in cleaned
     assert "\n\n\n" not in cleaned
+
+
+# ------------------------------------------------------------
+# Lab/medical document chat
+# ------------------------------------------------------------
+
+def _upload_document(client, headers):
+    from tests.conftest import make_test_lab_report_text
+
+    patient_id = client.post(
+        "/patients/", json=PATIENT_PAYLOAD, headers=headers
+    ).json()["patient"]["id"]
+    files = {"file": ("labs.txt", make_test_lab_report_text(), "text/plain")}
+    return client.post(
+        "/documents/upload", data={"patient_id": str(patient_id)}, files=files, headers=headers
+    ).json()["document"]
+
+
+def _doc_question(text, document_id):
+    return {"document_id": document_id, "messages": [{"role": "user", "content": text}]}
+
+
+def test_chat_rejects_report_and_document_together(client, auth_headers):
+    payload = {"report_id": 1, "document_id": 1, "messages": [{"role": "user", "content": "hi"}]}
+    assert client.post("/chat", json=payload, headers=auth_headers).status_code == 422
+
+
+def test_chat_about_another_users_document_is_404(client, register_and_login):
+    headers_a, _ = register_and_login()
+    headers_b, _ = register_and_login()
+    document = _upload_document(client, headers_a)
+
+    response = client.post("/chat", json=_doc_question("What do these mean?", document["id"]), headers=headers_b)
+    assert response.status_code == 404
+
+
+def test_builtin_document_answer_lists_flagged_values(client, auth_headers):
+    document = _upload_document(client, auth_headers)
+
+    body = client.post(
+        "/chat", json=_doc_question("What do these results mean?", document["id"]), headers=auth_headers
+    ).json()
+
+    assert body["source"] == "builtin"
+    assert "Hemoglobin: 10.8 g/dL - Low" in body["reply"]
+    assert "WBC" in body["reply"] and "High" in body["reply"]
+    assert "Cholesterol" not in body["reply"]  # within range, not listed as flagged
+
+
+def test_builtin_document_answer_for_a_named_test(client, auth_headers):
+    document = _upload_document(client, auth_headers)
+
+    reply = client.post(
+        "/chat", json=_doc_question("Is my cholesterol ok?", document["id"]), headers=auth_headers
+    ).json()["reply"]
+
+    assert "Total Cholesterol: 185" in reply
+    assert "general adult range" in reply
+
+
+def test_document_emergency_question_gets_urgent_care_answer(client, auth_headers):
+    document = _upload_document(client, auth_headers)
+
+    reply = client.post(
+        "/chat", json=_doc_question("I have chest pain, what now?", document["id"]), headers=auth_headers
+    ).json()["reply"]
+
+    assert "urgent medical care" in reply
+
+
+def test_llm_gets_document_values_but_no_report_text_or_identifiers(client, auth_headers, monkeypatch):
+    document = _upload_document(client, auth_headers)
+    calls = []
+
+    def fake_llm(system_prompt, messages):
+        calls.append(system_prompt)
+        return "Local model answer."
+
+    monkeypatch.setattr(chatbot, "_call_local_llm", fake_llm)
+
+    body = client.post(
+        "/chat", json=_doc_question("Explain my report", document["id"]), headers=auth_headers
+    ).json()
+
+    assert body["source"] == "local_llm"
+    system_prompt = calls[0]
+    assert "lab/medical report" in system_prompt
+    assert "Hemoglobin: 10.8 g/dL - Low (reference 12.0-15.5, range printed in the report)" in system_prompt
+    assert "Patient age: 45" in system_prompt
+    # Neither the patient record's identifiers nor the raw report text
+    # (which names "Jane Roe") are sent.
+    assert "Distinctive Patientname" not in system_prompt
+    assert "5550001111" not in system_prompt
+    assert "Evergreen" not in system_prompt
+    assert "Jane Roe" not in system_prompt
+    assert "COMPLETE BLOOD COUNT REPORT" not in system_prompt

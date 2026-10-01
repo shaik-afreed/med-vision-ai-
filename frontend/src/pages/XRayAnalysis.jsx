@@ -4,7 +4,7 @@ import Dropzone from "../components/Dropzone";
 import Icon from "../components/Icon";
 import PageHeader from "../components/PageHeader";
 import ResultPanel from "../components/ResultPanel";
-import XRayChatbot from "../components/XRayChatbot";
+import AiAssistant from "../components/AiAssistant";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 
@@ -236,7 +236,7 @@ function XRayAnalysis() {
         </section>
       </div>
 
-      <XRayChatbot report={report} />
+      <AiAssistant report={report} />
     </>
   );
 }

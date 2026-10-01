@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from database.database import get_db
 from dependencies.auth import get_current_user
+from models.document import MedicalDocument
 from models.report import Report
 from models.user import User
 from schemas.chat import ChatRequest, ChatResponse, ChatStatusResponse
@@ -63,6 +64,28 @@ def chat(
             "patient_gender": report.patient.gender,
         }
 
+    document_context = None
+
+    if payload.document_id is not None:
+        document = db.query(MedicalDocument).filter(
+            MedicalDocument.id == payload.document_id,
+            MedicalDocument.owner_id == current_user.id,
+        ).first()
+
+        if document is None:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        # The extracted values and the generated summary only. The raw report
+        # text usually contains the patient's name, ID and address, so it is
+        # never sent to the assistant.
+        document_context = {
+            "findings": document.findings,
+            "summary": document.summary,
+            "has_text": bool((document.raw_text or "").strip()),
+            "patient_age": document.patient.age,
+            "patient_gender": document.patient.gender,
+        }
+
     messages = [message.model_dump() for message in payload.messages]
 
-    return chatbot.ask(messages, report_context)
+    return chatbot.ask(messages, report_context, document_context)

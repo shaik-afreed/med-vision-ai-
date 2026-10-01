@@ -6,6 +6,7 @@ import {
   getDocumentFileUrl,
   getErrorMessage,
 } from "../api/api";
+import AiAssistant from "../components/AiAssistant";
 import Dropzone from "../components/Dropzone";
 import Icon from "../components/Icon";
 import PageHeader from "../components/PageHeader";
@@ -412,6 +413,8 @@ function DocumentAnalysis() {
           </div>
         )}
       </section>
+
+      <AiAssistant mode="document" document={document} />
     </>
   );
 }

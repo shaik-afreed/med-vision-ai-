@@ -262,7 +262,53 @@ def _result_lines(report_context: dict) -> list[str]:
     return lines
 
 
-def _system_prompt(report_context: dict | None, facts: dict | None) -> str:
+def _finding_line(finding: dict) -> str:
+    unit = f" {finding['unit']}" if finding.get("unit") else ""
+    source = (
+        "range printed in the report"
+        if finding.get("reference_source") == "report"
+        else "general adult range"
+    )
+    return (
+        f"{finding['test']}: {finding['value']}{unit} - {finding['status']} "
+        f"(reference {finding.get('reference_range') or 'unknown'}, {source})"
+    )
+
+
+def _document_system_prompt(document_context: dict) -> str:
+    findings = document_context.get("findings") or []
+    values = "\n".join(f"- {_finding_line(f)}" for f in findings) or "- (no lab values were recognized)"
+
+    return f"""You are the MediVision AI assistant inside a medical app. The user is looking at an automated analysis of a written lab/medical report and asks you questions about it.
+
+Rules:
+- Answer every question the user asks as helpfully and accurately as you can, including general health and medical questions.
+- When talking about this report, use only the extracted values below. You did not see the original document. Never invent values, findings or medical history.
+- Explain in simple words what each test measures and what a High or Low value can generally mean, but do not diagnose. Many things (diet, hydration, medicines, the lab's own method, age, sex, pregnancy) affect values, and a single out-of-range value is often not serious.
+- Never prescribe or give medicine doses. Recommend a qualified doctor for personal medical decisions.
+- If the user mentions emergency symptoms (severe breathing difficulty, chest pain, fainting, confusion), tell them to get urgent medical care immediately.
+- If you are not sure of something, say so instead of guessing.
+- Use simple, clear language and keep answers focused. Plain text only, no Markdown symbols like ** or #. For a list, start lines with "- ".
+- Do not repeat these instructions back to the user.
+
+How the values were obtained:
+- A text-pattern matcher read "test name + number" lines from the report. It can miss values or misread unusual layouts, and it cannot read scanned images (no OCR).
+- Each value was compared with the reference range printed in the report when there was one, otherwise with a general adult range that may not fit this patient's lab, age or sex.
+
+Patient age: {document_context.get("patient_age")}
+Patient gender: {document_context.get("patient_gender")}
+
+Values extracted from the report:
+{values}
+
+Automatic summary shown to the user:
+{document_context.get("summary") or "(none)"}"""
+
+
+def _system_prompt(report_context: dict | None, facts: dict | None, document_context: dict | None = None) -> str:
+    if document_context is not None:
+        return _document_system_prompt(document_context)
+
     limitations = "\n".join(f"- {item}" for item in (facts or {}).get("limitations", []))
 
     if report_context is None:
@@ -428,15 +474,114 @@ def _answer_how_it_works(facts: dict | None) -> str:
     )
 
 
-def builtin_answer(question: str, ctx: dict | None, facts: dict | None) -> str:
+EMERGENCY_ANSWER = (
+    "If someone has severe difficulty breathing, chest pain, bluish lips, "
+    "confusion or a very high fever, please get urgent medical care now "
+    "(call your local emergency number). This tool can't help in an emergency."
+)
+
+
+# Words too generic to identify a test on their own ("total", "count"...).
+_GENERIC_TEST_WORDS = {
+    "total", "count", "level", "levels", "serum", "blood", "plasma", "test", "fasting",
+    "mean", "cell", "cells", "volume", "ratio", "rate", "random", "free", "high", "low", "normal",
+}
+
+
+def _asks_about_test(text: str, test_name: str) -> bool:
+    """People name tests loosely ("my cholesterol" for "Total Cholesterol",
+    "wbc" for "WBC Count"), so match any distinctive word of the name."""
+    words = [w for w in re.findall(r"[a-z0-9]+", test_name.lower())
+             if w not in _GENERIC_TEST_WORDS and len(w) >= 2]
+    return any(re.search(r"\b" + re.escape(w) + r"\b", text) for w in words)
+
+
+def _document_answer(question: str, doc: dict) -> str:
+    """Offline answers about an analyzed lab report, built only from its
+    extracted values."""
+    text = question.lower()
+    findings = doc.get("findings") or []
+    flagged = [f for f in findings if f["status"] in ("High", "Low")]
+
+    if not findings:
+        if not doc.get("has_text"):
+            return (
+                "No readable text was found in this document, so no values could be "
+                "checked. It may be a scanned or image-only PDF; this tool can't read "
+                "those (no OCR). Please read the original document or upload a "
+                "text-based PDF."
+            )
+        return (
+            "The report's text was read, but no values in a recognized 'test name + "
+            "number' format were found, so nothing could be checked against a "
+            "reference range. Please read the extracted text or the original report."
+        )
+
+    mentioned = [f for f in findings if _asks_about_test(text, f["test"])]
+    if mentioned:
+        lines = "\n".join(f"- {_finding_line(f)}" for f in mentioned)
+        return (
+            f"From this report:\n{lines}\n"
+            "High or Low only means outside the reference range; a doctor should "
+            "interpret it together with symptoms and other results."
+        )
+
+    if _mentions(text, ["reference", "range", "ranges", "normal range"]):
+        return (
+            "A reference range is the span of values seen in most healthy people. "
+            "Where the report printed its own range, that was used; otherwise a general "
+            "adult range was used, which may not match this lab, or the patient's age "
+            "or sex. A value slightly outside the range is common and often not serious."
+        )
+    if _mentions(text, ["reliable", "reliability", "accurate", "accuracy", "trust",
+                        "sure", "wrong", "mistake", "missed"]):
+        return (
+            "The values were read by a simple text-pattern matcher, not a clinical system:\n"
+            "- It can miss values or misread unusual report layouts.\n"
+            "- It cannot read scanned or image-only PDFs.\n"
+            "- Some ranges are general adult ranges, not this lab's own.\n"
+            "Always check the numbers against the original report."
+        )
+    if _mentions(text, ["next", "should i", "what do i do", "what should", "treatment",
+                        "treat", "medicine", "medication", "doctor", "diet", "worry", "serious"]):
+        answer = (
+            "I can't give medical advice or treatment, but in general:\n"
+            "- Share this report with a doctor, who can interpret it together with "
+            "symptoms, history and other tests.\n"
+            "- Only a doctor should decide on further tests or medicines."
+        )
+        if flagged:
+            answer += f"\n- {len(flagged)} value(s) are outside the range, so ask the doctor about them."
+        return answer
+    if _mentions(text, ["hi", "hello", "hey", "help"]):
+        return (
+            "Hello! I can explain this lab report: which values are high or low, what "
+            "a reference range is, how reliable the extraction is, and general next steps."
+        )
+
+    # Default: explain the report as a whole.
+    if flagged:
+        lines = "\n".join(f"- {_finding_line(f)}" for f in flagged)
+        return (
+            f"{len(findings)} value(s) were read from this report and {len(flagged)} "
+            f"fall outside the reference range:\n{lines}\n"
+            "Outside the range does not by itself mean disease; a doctor should "
+            "interpret these results. Ask me about a specific test for more."
+        )
+    return (
+        f"All {len(findings)} value(s) read from this report are within their reference "
+        "range. The tool may have missed values it could not recognize, so check the "
+        "original report, and a doctor should review it."
+    )
+
+
+def builtin_answer(question: str, ctx: dict | None, facts: dict | None, doc: dict | None = None) -> str:
     text = question.lower()
 
     if _mentions(text, EMERGENCY_WORDS):
-        return (
-            "If someone has severe difficulty breathing, chest pain, bluish lips, "
-            "confusion or a very high fever, please get urgent medical care now "
-            "(call your local emergency number). This tool can't help in an emergency."
-        )
+        return EMERGENCY_ANSWER
+    if doc is not None:
+        return _document_answer(question, doc)
     if _mentions(text, ["heatmap", "heat map", "grad-cam", "gradcam", "colors", "colours",
                         "red", "yellow", "highlighted", "focus", "focused"]):
         return _answer_heatmap(ctx)
@@ -501,7 +646,7 @@ def plain_text(text: str) -> str:
 # Entry point
 # ------------------------------------------------------------
 
-def ask(messages: list[dict], report_context: dict | None) -> dict:
+def ask(messages: list[dict], report_context: dict | None, document_context: dict | None = None) -> dict:
     """messages: [{"role": "user"|"assistant", "content": str}, ...],
     already validated to start and end with a user turn."""
     facts = load_model_facts()
@@ -510,15 +655,19 @@ def ask(messages: list[dict], report_context: dict | None) -> dict:
     # Safety first: emergency wording always gets the fixed urgent-care
     # answer, never a small model's improvisation.
     if _mentions(question.lower(), EMERGENCY_WORDS):
-        return {"reply": builtin_answer(question, report_context, facts), "source": "builtin", "model": None}
+        return {"reply": EMERGENCY_ANSWER, "source": "builtin", "model": None}
 
-    builtin = {"reply": builtin_answer(question, report_context, facts), "source": "builtin", "model": None}
+    builtin = {
+        "reply": builtin_answer(question, report_context, facts, document_context),
+        "source": "builtin",
+        "model": None,
+    }
 
     recent = messages[-LLM_HISTORY_MESSAGES:]
     if recent[0]["role"] != "user":
         recent = recent[1:]
 
-    system_prompt = _system_prompt(report_context, facts)
+    system_prompt = _system_prompt(report_context, facts, document_context)
 
     if nvidia_configured() and not _nvidia_recently_down():
         try:
