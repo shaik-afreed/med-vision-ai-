@@ -1,0 +1,51 @@
+{
+ "V1": {
+  "threshold": 0.82,
+  "accuracy": 0.9067,
+  "sensitivity": 0.8974,
+  "specificity": 0.922,
+  "precision": 0.9502,
+  "f1": 0.9231,
+  "auc": 0.9719,
+  "tn": 130,
+  "fp": 11,
+  "fn": 24,
+  "tp": 210
+ },
+ "Candidate A": {
+  "threshold": 0.7335,
+  "accuracy": 0.92,
+  "sensitivity": 0.9573,
+  "specificity": 0.8582,
+  "precision": 0.918,
+  "f1": 0.9372,
+  "auc": 0.9781,
+  "tn": 121,
+  "fp": 20,
+  "fn": 10,
+  "tp": 224,
+  "acc_gain_vs_v1": 0.0133,
+  "ci95": [
+   -0.016,
+   0.0427
+  ]
+ },
+ "Candidate B": {
+  "threshold": 0.842,
+  "accuracy": 0.9253,
+  "sensitivity": 0.9444,
+  "specificity": 0.8936,
+  "precision": 0.9364,
+  "f1": 0.9404,
+  "auc": 0.9786,
+  "tn": 126,
+  "fp": 15,
+  "fn": 13,
+  "tp": 221,
+  "acc_gain_vs_v1": 0.0187,
+  "ci95": [
+   -0.008,
+   0.0453
+  ]
+ }
+}

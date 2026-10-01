@@ -115,6 +115,8 @@ def main():
     parser.add_argument("--dropout", type=float, default=0.3)
     parser.add_argument("--epochs1", type=int, default=10)
     parser.add_argument("--epochs2", type=int, default=12)
+    parser.add_argument("--resume-phase2", action="store_true",
+                        help="skip phase 1 and start phase 2 from the saved phase-1 checkpoint")
     parser.add_argument("--limit", type=int, default=0, help="smoke test: use only N train images")
     args = parser.parse_args()
 
@@ -141,14 +143,21 @@ def main():
     started = time.time()
 
     # ---- Phase 1: frozen backbone, train the head ----
-    print(f"\n[{args.name}] PHASE 1 (frozen backbone, lr={args.lr1})")
-    compile_model(training_model, args.lr1)
-    h1 = training_model.fit(
-        train_seq, validation_data=val_seq, epochs=args.epochs1,
-        class_weight=class_weight, verbose=2,
-        callbacks=callbacks(3, os.path.join(RUNS, f"{args.name}_phase1.weights.h5")),
-    )
-    history["phase1"] = {k: [float(v) for v in vals] for k, vals in h1.history.items()}
+    phase1_path = os.path.join(RUNS, f"{args.name}_phase1.weights.h5")
+    if args.resume_phase2:
+        print(f"\n[{args.name}] PHASE 1 skipped; loading {phase1_path}")
+        training_model.load_weights(phase1_path)
+        h1_history = {"loss": [], "resumed_from_checkpoint": True}
+    else:
+        print(f"\n[{args.name}] PHASE 1 (frozen backbone, lr={args.lr1})")
+        compile_model(training_model, args.lr1)
+        h1 = training_model.fit(
+            train_seq, validation_data=val_seq, epochs=args.epochs1,
+            class_weight=class_weight, verbose=2,
+            callbacks=callbacks(3, phase1_path),
+        )
+        h1_history = h1.history
+    history["phase1"] = {k: v if not isinstance(v, list) else [float(x) for x in v] for k, v in h1_history.items()}
 
     # ---- Phase 2: unfreeze the last N layers (BatchNorm stays frozen) ----
     base.trainable = True
@@ -186,7 +195,7 @@ def main():
         "validation_images": int(len(y_val)),
         "class_weight": class_weight,
         "augmentation": "flip, rotation 0.06, zoom 0.12, translation 0.06, contrast 0.25, brightness 0.2",
-        "epochs_run": {"phase1": len(h1.history["loss"]), "phase2": len(h2.history["loss"])},
+        "epochs_run": {"phase1": len(h1_history["loss"]), "phase2": len(h2.history["loss"])},
         "best_val_auc_phase2": float(max(h2.history["val_auc"])),
         "train_minutes": round((time.time() - started) / 60, 1),
         "model_path": model_path,
